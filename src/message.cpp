@@ -2,14 +2,13 @@
 
 #include <iostream>
 
-#include <spdlog/spdlog.h>
 #include <boost/crc.hpp>
 
 bool get_message_packet(MessagePacket& packet, const std::array<uint8_t,22> &buffer) 
 {
     if (buffer[0] != 0x2B || buffer[21] != 0x2A) 
     {
-        spdlog::error("Error SOF {} or EOF {}", buffer[0], buffer[21]);
+        // spdlog::error("Error SOF {} or EOF {}", buffer[0], buffer[21]);
         return false;
     }
     packet.head = buffer[0];
@@ -30,7 +29,7 @@ bool get_message_packet(MessagePacket& packet, const std::array<uint8_t,22> &buf
     crc32.process_bytes(buffer.data(), 17);
     if (crc32.checksum() != packet.crc32) 
     {
-        spdlog::error("CRC32 error");
+        // spdlog::error("CRC32 error");
         return false;
     }
     return true;

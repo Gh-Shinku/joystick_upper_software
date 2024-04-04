@@ -1,6 +1,5 @@
 #include "tcp_socket/tcp_socket.h"
 #include <iostream>
-#include <spdlog/spdlog.h>
 #include <chrono>
 #include <thread>
 

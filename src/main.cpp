@@ -2,7 +2,6 @@
 #include "serial_port/serial_port.h"
 #include "message/message.h"
 #include "bupt_interfaces/msg/new_joystick.hpp"
-#include <spdlog/spdlog.h>
 #include <rclcpp/rclcpp.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <csignal>
@@ -43,19 +42,19 @@ class RAII
 public:
     RAII(int argc,char * argv[]): context()
     {
-        rclcpp::init(argc,argv);
+        rclcpp::init(0, nullptr);
         try {
             signals_ = std::make_unique<boost::asio::signal_set>(context, SIGINT);
             signals_->async_wait([this](const boost::system::error_code& error, int signal_number) {
                 if (!error) {
                     context.stop();
-                    spdlog::warn("Received signal: SIGINT");
+                    RCLCPP_WARN(rclcpp::get_logger("KeyInterrupt"), "Receive Signal: %d", signal_number);
                 }
             });
-            JoyStickNode node(context, "joystick");
+            JoyStickNode node(context, "/joystick");
             context.run();
         } catch (const std::exception &e) {
-            spdlog::error("Exception: {}", e.what());
+            RCLCPP_INFO(rclcpp::get_logger("Exception"),e.what());
         }
     }
     ~RAII()

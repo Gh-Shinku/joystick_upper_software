@@ -2,7 +2,6 @@
 #include "message/message.h"
 
 #include <iostream>
-#include <spdlog/spdlog.h>
 #include <thread>
 #include <boost/asio/read_until.hpp>
 
@@ -43,7 +42,6 @@ void SerialPortClient::read_packet() {
             // 读取并处理22字节的数据包
             std::array<uint8_t, 22> buffer = {0};
             std::copy(read_buffer_.begin() + packetStartIndex, read_buffer_.begin() + packetStartIndex + 22, buffer.begin());
-            spdlog::info("Received from serial port");
             MessagePacket message_packet;
             get_message_packet(message_packet, buffer);
             
