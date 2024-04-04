@@ -23,8 +23,8 @@ bool get_message_packet(MessagePacket& packet, const std::array<uint8_t,22> &buf
     packet.crc32 = (buffer[17]) | (buffer[18] << 8) | (buffer[19] << 16) | (buffer[20] << 24);
     packet.tail = buffer[21];
 
-    spdlog::info("MessagePacket: head: {}, number: {}, action: {}, button: {}, reserve: {}, crc32: {}, tail: {}", 
-        packet.head, packet.number, packet.action[0], packet.button, packet.reserve, packet.crc32, packet.tail);
+    // spdlog::info("MessagePacket: head: {}, number: {}, action: {}, button: {}, reserve: {}, crc32: {}, tail: {}", 
+    //     packet.head, packet.number, packet.action[0], packet.button, packet.reserve, packet.crc32, packet.tail);
     
     boost::crc_32_type crc32;
     crc32.process_bytes(buffer.data(), 17);

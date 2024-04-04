@@ -1,5 +1,4 @@
 #include "tcp_socket/tcp_socket.h"
-#include "message/message.h"
 #include <iostream>
 #include <spdlog/spdlog.h>
 #include <chrono>
@@ -10,7 +9,13 @@ using ip::tcp;
 using std::cout;
 using std::endl;
 
-TCPSocketClient::TCPSocketClient(boost::asio::io_context &context_arg) : context(context_arg), socket(context) {}
+TCPSocketClient::TCPSocketClient(boost::asio::io_context &context_arg, std::function<void(const MessagePacket&)> on_receive):
+    context(context_arg), 
+    socket(context), 
+    on_receive(on_receive)
+{
+
+}
 
 TCPSocketClient::~TCPSocketClient()
 {
@@ -42,7 +47,9 @@ void TCPSocketClient::send_sync_byte() {
             if (!ec) {
                 MessagePacket message_packet;
                 get_message_packet(message_packet, buffer);
-                spdlog::info("Received from socket");
+                if (on_receive) {
+                    on_receive(message_packet);
+                }
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
                 send_sync_byte();
             }
