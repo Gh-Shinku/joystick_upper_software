@@ -21,8 +21,6 @@ TCPSocketClient::~TCPSocketClient()
     socket.close();
 }
 
-#include <boost/asio/connect.hpp> // Add this line
-
 void TCPSocketClient::connect(const std::string& host, const std::string& port) {
     tcp::resolver resolver(context);
     auto endpoints = resolver.resolve(host, port);
@@ -45,9 +43,12 @@ void TCPSocketClient::send_sync_byte() {
         [this](boost::system::error_code ec, std::size_t length) {
             if (!ec) {
                 MessagePacket message_packet;
-                get_message_packet(message_packet, buffer);
-                if (on_receive) {
-                    on_receive(message_packet);
+                if (get_message_packet(message_packet, buffer))
+                {
+                    if (on_receive)
+                    {
+                        on_receive(message_packet);
+                    }
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
                 send_sync_byte();

@@ -18,12 +18,15 @@ public:
     JoyStickNode(boost::asio::io_context &context, std::string topic): Node("joystick_node"), context(context)
     {
         publisher_ = this->create_publisher<bupt_interfaces::msg::NewJoystick>(topic, 10);
-        tcp_client = std::make_unique<TCPSocketClient>(context,[this](const MessagePacket &message_packet)
+        // tcp_client = std::make_unique<TCPSocketClient>(context,[this](const MessagePacket &message_packet)
+        // {
+        //     publish(message_packet);
+        // });
+        // tcp_client -> connect("192.168.4.1","3456");
+        serial_client = std::make_unique<SerialPortClient>(context,"/dev/ttyACM0",[this](const MessagePacket &message_packet)
         {
             publish(message_packet);
         });
-        tcp_client -> connect("192.168.4.1","3456");
-
     }
 
     void publish(const MessagePacket &message_packet)

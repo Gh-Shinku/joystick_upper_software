@@ -8,12 +8,9 @@ find_package(Boost REQUIRED COMPONENTS system)
 find_package(rclcpp REQUIRED)
 find_package(bupt_interfaces REQUIRED)
 
+add_definitions(-DROS2_ENVIROMENT)
 
 set(CMAKE_CXX_STANDARD 17)
-
-# add_executable(hello_world hello_world.cpp)
-# target_link_libraries(hello_world PRIVATE spdlog::spdlog)
-
 
 add_library(
     communication_lib STATIC
