@@ -25,12 +25,14 @@ add_executable(
 )
 target_link_libraries(joystick_upper_software PRIVATE communication_lib Boost::system spdlog::spdlog)
 
-add_executable(
-    test_winsock
-    test/winsock_test.cpp
-)
-target_link_libraries(test_winsock PRIVATE communication_lib)
-target_include_directories(test_winsock PUBLIC ${CMAKE_SOURCE_DIR}/include)
+if (WIN32)
+    add_executable(
+        test_winsock
+        test/winsock_test.cpp
+    )
+    target_link_libraries(test_winsock PRIVATE communication_lib)
+    target_include_directories(test_winsock PUBLIC ${CMAKE_SOURCE_DIR}/include)
+endif()
 
 add_executable(
     test_boost_socket
