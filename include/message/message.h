@@ -17,5 +17,4 @@ struct MessagePacket
 
 bool get_message_packet(MessagePacket& packet, const std::array<uint8_t,22> &buffer);
 
-
 #endif /* MESSAGE_H_ */

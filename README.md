@@ -45,6 +45,8 @@ colcon build --packages-select joystick_upper_software --cmake-args --presets=de
 
 - ROS节点的程序中引入spdlog可能会导致段错误，预计为版本冲突
   - 解决方法：在ROS环境下不使用spdlog
+- 无法解析--preset参数
+  - 解决方法：升级cmake到最新版本（3.20以上）
 
 
 
