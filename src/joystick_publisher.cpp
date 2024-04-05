@@ -1,35 +1,35 @@
 #include "tcp_socket/tcp_socket.h"
 #include "serial_port/serial_port.h"
 #include "message/message.h"
-#include "bupt_interfaces/msg/new_joystick.hpp"
+#include "bupt_interfaces/msg/joystick.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <csignal>
 
-class JoyStickNode : public rclcpp::Node
+class JoystickPublisher : public rclcpp::Node
 {
 private:
-    rclcpp::Publisher<bupt_interfaces::msg::NewJoystick>::SharedPtr publisher_;
+    rclcpp::Publisher<bupt_interfaces::msg::Joystick>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
     boost::asio::io_context &context;
     std::unique_ptr<TCPSocketClient> tcp_client;
     std::unique_ptr<SerialPortClient> serial_client;
 
 public:
-    JoyStickNode(boost::asio::io_context &context, std::string topic) : Node("joystick_node"), context(context)
+    JoystickPublisher(boost::asio::io_context &context, std::string topic) : Node("joystick_node"), context(context)
     {
-        publisher_ = this->create_publisher<bupt_interfaces::msg::NewJoystick>(topic, 10);
-        tcp_client = std::make_unique<TCPSocketClient>(context, [this](const MessagePacket &message_packet)
-                                                       { publish(message_packet); });
-        tcp_client->connect("192.168.4.1", "3456");
-        serial_client = std::make_unique<SerialPortClient>(context, "/dev/ttyACM0", [this](const MessagePacket &message_packet)
+        publisher_ = this->create_publisher<bupt_interfaces::msg::Joystick>(topic, 10);
+        // tcp_client = std::make_unique<TCPSocketClient>(context, [this](const MessagePacket &message_packet)
+        //                                                { publish(message_packet); });
+        // tcp_client->connect("192.168.4.1", "3456");
+        serial_client = std::make_unique<SerialPortClient>(context, "/dev/ttyUSB0", [this](const MessagePacket &message_packet)
                                                            { publish(message_packet); });
     }
 
     void publish(const MessagePacket &message_packet)
     {
-        auto message = bupt_interfaces::msg::NewJoystick();
+        auto message = bupt_interfaces::msg::Joystick();
         message.action = message_packet.action;
         message.button = message_packet.button;
         publisher_->publish(message);
@@ -40,6 +40,7 @@ class RAII
 {
     boost::asio::io_context context;
     std::unique_ptr<boost::asio::signal_set> signals_;
+    std::shared_ptr<rclcpp::Node> node;
 
 public:
     RAII(int argc, char *argv[]) : context()
@@ -54,12 +55,12 @@ public:
                     context.stop();
                     RCLCPP_WARN(rclcpp::get_logger("KeyInterrupt"), "Receive Signal: %d", signal_number);
                 } });
-            JoyStickNode node(context, "/joystick");
+            node = std::make_shared<JoystickPublisher>(context, "joystick");
             context.run();
         }
         catch (const std::exception &e)
         {
-            RCLCPP_INFO(rclcpp::get_logger("Exception"), e.what());
+            RCLCPP_ERROR(rclcpp::get_logger("Exception"), e.what());
         }
     }
     ~RAII()

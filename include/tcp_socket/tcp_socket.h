@@ -4,15 +4,16 @@
 #include <boost/asio.hpp>
 #include <string>
 #include <array>
+
 #include "message/message.h"
 
-
-class TCPSocketClient {
+class TCPSocketClient
+{
 private:
     boost::asio::io_context &context;
     boost::asio::ip::tcp::socket socket;
     std::array<uint8_t, 22> buffer;
-    std::function<void(const MessagePacket&)> on_receive;
+    std::function<void(const MessagePacket &)> on_receive;
 
     void start_communication();
     void send_sync_byte();
@@ -20,7 +21,7 @@ private:
 public:
     TCPSocketClient(boost::asio::io_context &context, std::function<void(const MessagePacket &)> on_receive = nullptr);
     ~TCPSocketClient();
-    void connect(const std::string& host, const std::string& port);
+    void connect(const std::string &host, const std::string &port);
     void run();
 };
 
