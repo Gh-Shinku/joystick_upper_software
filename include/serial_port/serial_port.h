@@ -5,17 +5,21 @@
 #include <array>
 #include <string>
 
-class SerialPortClient {
+#include "message/message.h"
+
+class SerialPortClient
+{
 private:
     boost::asio::io_context &context;
     boost::asio::serial_port serial;
     std::string read_buffer_;
+    std::function<void(const MessagePacket &)> on_receive;
 
     void read_start();
     void read_packet();
 
 public:
-    SerialPortClient(boost::asio::io_context &context,const std::string& port);
+    SerialPortClient(boost::asio::io_context &context, const std::string &port, std::function<void(const MessagePacket &)> on_receive);
     void run();
 };
 
