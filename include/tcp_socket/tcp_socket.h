@@ -6,6 +6,7 @@
 #include <array>
 
 #include "message/message.h"
+#include "logger/logger.h"
 
 class TCPSocketClient
 {
@@ -15,7 +16,8 @@ private:
     std::unique_ptr<boost::asio::steady_timer> timer;
     std::string host, port;
     std::array<uint8_t, 22> buffer;
-    std::function<void(const MessagePacket &)> on_receive;
+    std::function<void(const Message::MessagePacket &)> on_receive;
+    LoggerImpl logger;
 
     bool is_connected = false;
 
@@ -23,7 +25,7 @@ private:
     void send_sync_byte();
 
 public:
-    TCPSocketClient(boost::asio::io_context &context, std::function<void(const MessagePacket &)> on_receive = nullptr);
+    TCPSocketClient(boost::asio::io_context &context, std::function<void(const Message::MessagePacket &)> on_receive = nullptr);
     ~TCPSocketClient();
     void connect(const std::string &host, const std::string &port);
     void run();

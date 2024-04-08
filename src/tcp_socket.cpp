@@ -4,16 +4,15 @@
 #include <chrono>
 #include <thread>
 
-#include <spdlog/spdlog.h>
-
 using namespace boost::asio;
 using ip::tcp;
 using std::cout;
 using std::endl;
 
-TCPSocketClient::TCPSocketClient(boost::asio::io_context &context_arg, std::function<void(const MessagePacket &)> on_receive) : context(context_arg),
-                                                                                                                                socket(context),
-                                                                                                                                on_receive(on_receive)
+TCPSocketClient::TCPSocketClient(boost::asio::io_context &context_arg, std::function<void(const Message::MessagePacket &)> on_receive) : context(context_arg),
+                                                                                                                                         socket(context),
+                                                                                                                                         on_receive(on_receive),
+                                                                                                                                         logger("TCPSocketClient")
 {
 }
 
@@ -34,13 +33,13 @@ void TCPSocketClient::connect(const std::string &host, const std::string &port)
                          if (ec != boost::asio::error::operation_aborted)
                          {
                              socket.close();
-                             spdlog::warn("Connect Timeout");
+                             logger.warn("Connection timeout.");
                          } });
     boost::asio::async_connect(socket, endpoints, [this](boost::system::error_code ec, tcp::endpoint)
                                {
                                     if (!ec)
                                     {
-                                        spdlog::info("Connected to server.");
+                                        logger.info("Connected to server.");
                                         timer->cancel();
                                         is_connected = true;
                                         start_communication();
@@ -62,7 +61,7 @@ void TCPSocketClient::send_sync_byte()
                            {
                                if (!ec)
                                {
-                                   MessagePacket message_packet;
+                                   Message::MessagePacket message_packet;
                                    if (get_message_packet(message_packet, buffer))
                                    {
                                        if (on_receive)

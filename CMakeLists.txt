@@ -9,7 +9,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 find_package(rclcpp REQUIRED)
 find_package(bupt_interfaces REQUIRED)
 
-add_definitions(-DROS2_ENVIROMENT)
+add_definitions(-DROS2)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -19,7 +19,8 @@ add_library(
     src/serial_port.cpp
     src/tcp_socket.cpp
 )
-target_link_libraries(communication_lib PRIVATE spdlog::spdlog Boost::system)
+ament_target_dependencies(communication_lib rclcpp)
+target_link_libraries(communication_lib spdlog::spdlog Boost::system)
 target_include_directories(communication_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_executable(
