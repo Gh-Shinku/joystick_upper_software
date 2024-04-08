@@ -7,6 +7,13 @@
 #include <spdlog/spdlog.h>
 #endif
 
+static std::array<int16_t, 4> last_action;
+
+double low_pass_filter(double current, double target, double a)
+{
+    return current + (target - current) * a;
+}
+
 bool get_message_packet(MessagePacket &packet, const std::array<uint8_t, 22> &buffer)
 {
     if (buffer[0] != 0x2B || buffer[21] != 0x2A)
@@ -36,5 +43,9 @@ bool get_message_packet(MessagePacket &packet, const std::array<uint8_t, 22> &bu
 #endif
         return false;
     }
+
+    for (int i = 0; i < 4; i++)
+        last_action[i] = packet.action[i] = low_pass_filter(last_action[i], packet.action[i], 0.4);
+
     return true;
 }

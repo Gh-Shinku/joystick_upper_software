@@ -4,6 +4,8 @@
 #include <chrono>
 #include <thread>
 
+#include <spdlog/spdlog.h>
+
 using namespace boost::asio;
 using ip::tcp;
 using std::cout;
@@ -22,10 +24,27 @@ TCPSocketClient::~TCPSocketClient()
 
 void TCPSocketClient::connect(const std::string &host, const std::string &port)
 {
+    this->host = host, this->port = port;
     tcp::resolver resolver(context);
     auto endpoints = resolver.resolve(host, port);
-    boost::asio::connect(socket, endpoints);
-    start_communication();
+    timer = std::make_unique<boost::asio::steady_timer>(context);
+    timer->expires_after(std::chrono::seconds(1));
+    timer->async_wait([this](boost::system::error_code ec)
+                      {
+                         if (ec != boost::asio::error::operation_aborted)
+                         {
+                             socket.close();
+                             spdlog::warn("Connect Timeout");
+                         } });
+    boost::asio::async_connect(socket, endpoints, [this](boost::system::error_code ec, tcp::endpoint)
+                               {
+                                    if (!ec)
+                                    {
+                                        spdlog::info("Connected to server.");
+                                        timer->cancel();
+                                        is_connected = true;
+                                        start_communication();
+                                    } });
 }
 
 void TCPSocketClient::start_communication()
@@ -60,4 +79,9 @@ void TCPSocketClient::send_sync_byte()
 void TCPSocketClient::run()
 {
     context.run();
+}
+
+bool TCPSocketClient::is_connected_to_server() const
+{
+    return is_connected;
 }

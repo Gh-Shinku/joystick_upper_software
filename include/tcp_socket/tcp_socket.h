@@ -12,8 +12,12 @@ class TCPSocketClient
 private:
     boost::asio::io_context &context;
     boost::asio::ip::tcp::socket socket;
+    std::unique_ptr<boost::asio::steady_timer> timer;
+    std::string host, port;
     std::array<uint8_t, 22> buffer;
     std::function<void(const MessagePacket &)> on_receive;
+
+    bool is_connected = false;
 
     void start_communication();
     void send_sync_byte();
@@ -23,6 +27,7 @@ public:
     ~TCPSocketClient();
     void connect(const std::string &host, const std::string &port);
     void run();
+    bool is_connected_to_server() const;
 };
 
 #endif /* TCP_SOCKET_H_ */
