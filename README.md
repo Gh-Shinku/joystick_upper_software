@@ -36,7 +36,7 @@ $ ./vcpkg/bootstrap-vcpkg.sh
 具体地，当你在构建本工程时，你需要输入这一条指令：
 
 ```sh
-colcon build --packages-select joystick_upper_software --cmake-args --presets=default
+colcon build --packages-select joystick_upper_software --cmake-args --preset=default
 ```
 
 其中，`default`应该被修改为你在CMakeUserPresets.json中配置的`name`字段对应的值。
