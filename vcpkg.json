@@ -1,6 +1,8 @@
 {
-  "dependencies": [
-    "boost-asio",
-    "boost-crc"
-  ]
+    "dependencies": [
+        "boost-asio",
+        "spdlog",
+        "boost-crc",
+        "fmt"
+    ]
 }

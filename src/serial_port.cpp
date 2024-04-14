@@ -9,7 +9,7 @@ using namespace boost::asio;
 using boost::asio::serial_port_base;
 namespace asio = boost::asio;
 
-SerialPortClient::SerialPortClient(boost::asio::io_context &context_arg, const std::string &port, std::function<void(const MessagePacket &)> on_receive)
+SerialPortClient::SerialPortClient(boost::asio::io_context &context_arg, const std::string &port, std::function<void(const Message::MessagePacket &)> on_receive)
     : context(context_arg), serial(context_arg, port), on_receive(on_receive)
 {
     serial.set_option(serial_port_base::baud_rate(115200));
@@ -46,7 +46,7 @@ void SerialPortClient::read_packet()
         {
             std::array<uint8_t, 22> buffer = {0};
             std::copy(read_buffer_.begin() + packetStartIndex, read_buffer_.begin() + packetStartIndex + 22, buffer.begin());
-            MessagePacket message_packet;
+            Message::MessagePacket message_packet;
             if (get_message_packet(message_packet, buffer))
             {
                 if (on_receive)

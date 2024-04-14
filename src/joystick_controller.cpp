@@ -26,12 +26,14 @@ private:
     double max_angular_speed;
     double max_linear_acc;
 
+    double last_linear_acc;
+
     double current_speed_x;
     double current_speed_y;
     double current_rotation;
 
     static constexpr double MAX_ACTION[4] = {1616, 1665, 1681, 1617};
-    static constexpr double eps = 1e-6;
+    static constexpr double eps = 1e-2;
 
 public:
     JoystickController(double max_linear_speed, double max_angular_speed, double max_linear_acc) : Node("joystick_controller"), max_linear_speed(max_linear_speed), max_linear_acc(max_linear_acc),
@@ -48,6 +50,15 @@ public:
         auto msg = *msg_ptr;
         double speed = 0, rotation = 0, current_x = 0, current_y = 0;
 
+        if (abs(msg.action[1]) < 1400)
+        {
+            twist.angular.z = 0;
+        }
+        else
+        {
+            twist.angular.z = max_angular_speed * msg.action[1] / MAX_ACTION[1];
+        }
+
         if (msg.action[0] < -50)
         {
             current_rotation = 0;
@@ -63,18 +74,9 @@ public:
             return;
         }
         double current_acc = 0;
-        if (msg.action[0] > 50)
+        if (msg.action[0] > 100)
         {
-            current_acc = max_linear_acc * msg.action[0] / MAX_ACTION[0];
-        }
-
-        if (abs(msg.action[1]) < 50)
-        {
-            twist.angular.z = 0;
-        }
-        else
-        {
-            twist.angular.z = max_angular_speed * msg.action[1] / MAX_ACTION[1];
+            current_acc = max_linear_acc * (msg.action[0] / MAX_ACTION[0]);
         }
 
         double current_speed = hypot(current_speed_x, current_speed_y);
@@ -83,9 +85,14 @@ public:
             current_x = current_speed_x / current_speed;
             current_y = current_speed_y / current_speed;
         }
+        else
+        {
+            current_x = 0;
+            current_y = 0;
+        }
 
         double msg_x = 0, msg_y = 0;
-        if (abs(msg.action[2]) > 50 || abs(msg.action[3]) > 50)
+        if (abs(msg.action[2]) > 200 || abs(msg.action[3]) > 200)
         {
             auto r = hypot(msg.action[2], msg.action[3]);
             msg_x = msg.action[2] / r;
@@ -99,6 +106,8 @@ public:
         double target_acc = 0;
         if (r > eps)
             target_acc = hypot(target_acc_x, target_acc_y) / r * current_acc;
+        else
+            target_acc = current_acc;
         target_acc_x = target_acc * target_acc_x;
         target_acc_y = target_acc * target_acc_y;
 
@@ -112,6 +121,11 @@ public:
         {
             current_speed_x = current_speed_x / current_speed * current_speed_norm;
             current_speed_y = current_speed_y / current_speed * current_speed_norm;
+        }
+        else
+        {
+            current_speed_x = 0;
+            current_speed_y = 0;
         }
 
         twist.linear.x = current_speed_x;
@@ -130,7 +144,7 @@ public:
     RAII(int argc, char *argv[])
     {
         rclcpp::init(argc, argv);
-        node = std::make_shared<JoystickController>(10, 5, 10);
+        node = std::make_shared<JoystickController>(10, 5, 5);
         rclcpp::spin(node);
     }
     ~RAII()

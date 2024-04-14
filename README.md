@@ -36,7 +36,7 @@ $ ./vcpkg/bootstrap-vcpkg.sh
 具体地，当你在构建本工程时，你需要输入这一条指令：
 
 ```sh
-colcon build --packages-select joystick_upper_software --cmake-args --presets=default
+colcon build --packages-select joystick_upper_software --cmake-args --preset=default
 ```
 
 其中，`default`应该被修改为你在CMakeUserPresets.json中配置的`name`字段对应的值。
@@ -45,6 +45,7 @@ colcon build --packages-select joystick_upper_software --cmake-args --presets=de
 
 - ROS节点的程序中引入spdlog可能会导致段错误，预计为版本冲突
   - 解决方法：在ROS环境下不使用spdlog
+  - 目前已不存在这个问题，程序应当可以自动检测环境并使用合适的日志接口
 - 无法解析--preset参数
   - 解决方法：升级cmake到最新版本（3.20以上）
 

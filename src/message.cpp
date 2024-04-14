@@ -3,17 +3,18 @@
 #include <iostream>
 #include <boost/crc.hpp>
 
-#ifndef ROS2_ENVIROMENT
-#include <spdlog/spdlog.h>
-#endif
+static std::array<int16_t, 4> last_action;
 
-bool get_message_packet(MessagePacket &packet, const std::array<uint8_t, 22> &buffer)
+double low_pass_filter(double current, double target, double a)
+{
+    return current + (target - current) * a;
+}
+
+bool Message::get_message_packet(MessagePacket &packet, const std::array<uint8_t, 22> &buffer)
 {
     if (buffer[0] != 0x2B || buffer[21] != 0x2A)
     {
-#ifdef SPDLOG_H
-        spdlog::error("Error SOF {} or EOF {}", buffer[0], buffer[21]);
-#endif
+        logger.warn("SOF or EOF error!");
         return false;
     }
     packet.head = buffer[0];
@@ -31,10 +32,12 @@ bool get_message_packet(MessagePacket &packet, const std::array<uint8_t, 22> &bu
     crc32.process_bytes(buffer.data(), 17);
     if (crc32.checksum() != packet.crc32)
     {
-#ifdef SPDLOG_H
-        spdlog::error("CRC32 error");
-#endif
+        logger.warn("CRC32 error!");
         return false;
     }
+
+    for (int i = 0; i < 4; i++)
+        last_action[i] = packet.action[i] = low_pass_filter(last_action[i], packet.action[i], 0.4);
+
     return true;
 }

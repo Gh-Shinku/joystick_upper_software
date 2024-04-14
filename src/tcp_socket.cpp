@@ -9,9 +9,10 @@ using ip::tcp;
 using std::cout;
 using std::endl;
 
-TCPSocketClient::TCPSocketClient(boost::asio::io_context &context_arg, std::function<void(const MessagePacket &)> on_receive) : context(context_arg),
-                                                                                                                                socket(context),
-                                                                                                                                on_receive(on_receive)
+TCPSocketClient::TCPSocketClient(boost::asio::io_context &context_arg, std::function<void(const Message::MessagePacket &)> on_receive) : context(context_arg),
+                                                                                                                                         socket(context),
+                                                                                                                                         on_receive(on_receive),
+                                                                                                                                         logger("TCPSocketClient")
 {
 }
 
@@ -22,10 +23,27 @@ TCPSocketClient::~TCPSocketClient()
 
 void TCPSocketClient::connect(const std::string &host, const std::string &port)
 {
+    this->host = host, this->port = port;
     tcp::resolver resolver(context);
     auto endpoints = resolver.resolve(host, port);
-    boost::asio::connect(socket, endpoints);
-    start_communication();
+    timer = std::make_unique<boost::asio::steady_timer>(context);
+    timer->expires_after(std::chrono::seconds(1));
+    timer->async_wait([this](boost::system::error_code ec)
+                      {
+                         if (ec != boost::asio::error::operation_aborted)
+                         {
+                             socket.close();
+                             logger.warn("Connection timeout.");
+                         } });
+    boost::asio::async_connect(socket, endpoints, [this](boost::system::error_code ec, tcp::endpoint)
+                               {
+                                    if (!ec)
+                                    {
+                                        logger.info("Connected to server.");
+                                        timer->cancel();
+                                        is_connected = true;
+                                        start_communication();
+                                    } });
 }
 
 void TCPSocketClient::start_communication()
@@ -43,7 +61,7 @@ void TCPSocketClient::send_sync_byte()
                            {
                                if (!ec)
                                {
-                                   MessagePacket message_packet;
+                                   Message::MessagePacket message_packet;
                                    if (get_message_packet(message_packet, buffer))
                                    {
                                        if (on_receive)
@@ -60,4 +78,9 @@ void TCPSocketClient::send_sync_byte()
 void TCPSocketClient::run()
 {
     context.run();
+}
+
+bool TCPSocketClient::is_connected_to_server() const
+{
+    return is_connected;
 }
