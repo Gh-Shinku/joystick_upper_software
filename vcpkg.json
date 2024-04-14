@@ -1,7 +1,6 @@
 {
   "dependencies": [
     "boost-asio",
-    "spdlog",
     "boost-crc"
   ]
 }

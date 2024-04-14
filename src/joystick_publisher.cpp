@@ -1,5 +1,5 @@
 #include "tcp_socket/tcp_socket.h"
-#include "serial_port/serial_port.h"
+//#include "serial_port/serial_port.h"
 #include "message/message.h"
 #include "bupt_interfaces/msg/joystick.hpp"
 
@@ -11,20 +11,20 @@ class JoystickPublisher : public rclcpp::Node
 {
 private:
     rclcpp::Publisher<bupt_interfaces::msg::Joystick>::SharedPtr publisher_;
-    rclcpp::TimerBase::SharedPtr timer_;
+    // rclcpp::TimerBase::SharedPtr timer_;
     boost::asio::io_context &context;
     std::unique_ptr<TCPSocketClient> tcp_client;
-    std::unique_ptr<SerialPortClient> serial_client;
+    //std::unique_ptr<SerialPortClient> serial_client;
 
 public:
     JoystickPublisher(boost::asio::io_context &context, std::string topic) : Node("joystick_node"), context(context)
     {
         publisher_ = this->create_publisher<bupt_interfaces::msg::Joystick>(topic, 10);
-        // tcp_client = std::make_unique<TCPSocketClient>(context, [this](const MessagePacket &message_packet)
-        //                                                { publish(message_packet); });
-        // tcp_client->connect("192.168.4.1", "3456");
-        serial_client = std::make_unique<SerialPortClient>(context, "/dev/ttyUSB0", [this](const MessagePacket &message_packet)
-                                                           { publish(message_packet); });
+        tcp_client = std::make_unique<TCPSocketClient>(context, [this](const MessagePacket &message_packet)
+        { publish(message_packet); });
+        tcp_client->connect("192.168.4.1", "3456");
+        //serial_client = std::make_unique<SerialPortClient>(context, "/dev/ttyUSB0", [this](const MessagePacket &message_packet)
+        //                                                   { publish(message_packet); });
     }
 
     void publish(const MessagePacket &message_packet)
