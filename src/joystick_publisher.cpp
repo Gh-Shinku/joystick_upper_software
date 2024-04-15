@@ -1,5 +1,5 @@
 #include "tcp_socket/tcp_socket.h"
-//#include "serial_port/serial_port.h"
+#include "serial_port/serial_port.h"
 #include "message/message.h"
 #include "bupt_interfaces/msg/joystick.hpp"
 #include "logger/logger.h"

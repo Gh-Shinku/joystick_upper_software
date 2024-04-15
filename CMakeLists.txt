@@ -4,7 +4,7 @@ project(joystick_upper_software VERSION 1.0 LANGUAGES CXX)
 
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
-#find_package(spdlog REQUIRED CONFIG)
+find_package(spdlog REQUIRED CONFIG)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(rclcpp REQUIRED)
 find_package(bupt_interfaces REQUIRED)
