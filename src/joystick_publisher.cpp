@@ -34,17 +34,30 @@ public:
 
         tcp_client = std::make_unique<TCPSocketClient>(context, [this](const Message::MessagePacket &msg)
                                                        { update(msg); });
-        tcp_client->connect("192.168.4.1", "3456");
+
+        this->declare_parameter("ip", "192.168.4.1");
+        this->declare_parameter("port", 3456);
+        this->declare_parameter("serial_port", "/dev/ttyUSB0");
+
+        uint16_t port_int;
+        std::string ip, port;
+        std::string serial_port;
+        this->get_parameter("ip", ip);
+        this->get_parameter("port", port_int);
+        this->get_parameter("serial_port", serial_port);
+        port = std::to_string(port_int);
+
+        tcp_client->connect(ip, port);
         // 注意，这个函数仅仅会发起一个异步的连接请求，而并不确保连接成功
 
         try
         {
-            serial_client = std::make_unique<SerialPortClient>(context, "/dev/ttyUSB0", [this](const Message::MessagePacket &msg)
+            serial_client = std::make_unique<SerialPortClient>(context, serial_port, [this](const Message::MessagePacket &msg)
                                                                { update(msg); });
         }
         catch (boost::system::system_error &e)
         {
-            logger.error("Serial Port Open Failed: %s", e.what());
+            logger.error(e.what());
         }
         timer_for_count->async_wait([this](boost::system::error_code ec)
                                     { calculate_rate(ec); });
