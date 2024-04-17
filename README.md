@@ -41,6 +41,27 @@ colcon build --packages-select joystick_upper_software --cmake-args --preset=def
 
 其中，`default`应该被修改为你在CMakeUserPresets.json中配置的`name`字段对应的值。
 
+## 使用指南
+
+```
+ros2 launch joystick_upper_software joystick_launch.py 
+```
+
+这样将会启动整个手柄程序，并且开始对外发送数据。
+
+### 参数定义
+
+- ip ：手柄MCU的IP地址，字符串；
+- port ：手柄MCU的端口，数字；
+- serial_port : 手柄串口设备名，字符串；
+
+示例：你需要将串口设备名设置为`/dev/ttyACM0`
+
+```
+ros2 launch joystick_upper_software joystick_launch.py serial_port:="/dev/ttyACM0"
+```
+
+
 ## Troubleshooting
 
 - ROS节点的程序中引入spdlog可能会导致段错误，预计为版本冲突
