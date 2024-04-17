@@ -49,7 +49,7 @@ public:
         timer_for_count->async_wait([this](boost::system::error_code ec)
                                     { calculate_rate(ec); });
         timer_for_publish->async_wait([this](boost::system::error_code ec)
-                                      { publish(); });
+                                      { publish(ec); });
     }
 
     void calculate_rate(boost::system::error_code ec)
@@ -76,9 +76,15 @@ public:
     }
 
     // 按照设定的频率发布消息
-    void publish()
+    void publish(boost::system::error_code ec)
     {
-        publisher_->publish(message);
+        if (!ec)
+        {
+            publisher_->publish(message);
+            timer_for_publish->expires_after(std::chrono::milliseconds(20));
+            timer_for_publish->async_wait([this](boost::system::error_code ec)
+                                          { publish(ec); });
+        }
     }
 };
 
