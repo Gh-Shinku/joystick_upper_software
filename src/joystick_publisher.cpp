@@ -15,13 +15,11 @@ private:
 
     boost::asio::io_context &context;
 
-    std::unique_ptr<boost::asio::steady_timer> timer_;
+    std::unique_ptr<boost::asio::steady_timer> timer_for_count;
+    std::unique_ptr<boost::asio::steady_timer> timer_for_publish;
     std::unique_ptr<TCPSocketClient> tcp_client;
     std::unique_ptr<SerialPortClient> serial_client;
     LoggerImpl logger;
-
-    std::function<void(boost::system::error_code ec)> timeout_callback;
-    std::function<void(const Message::MessagePacket &message_packet)> msg_callback;
 
     bupt_interfaces::msg::Joystick message;
     uint32_t number = 0;
@@ -31,49 +29,50 @@ public:
     JoystickPublisher(boost::asio::io_context &context, const std::string &topic) : Node("joystick_node"), context(context), logger("joystick_node")
     {
         publisher_ = this->create_publisher<bupt_interfaces::msg::Joystick>(topic, 10);
-        timer_ = std::make_unique<boost::asio::steady_timer>(context, std::chrono::seconds(5));
+        timer_for_count = std::make_unique<boost::asio::steady_timer>(context, std::chrono::seconds(5));
+        timer_for_publish = std::make_unique<boost::asio::steady_timer>(context, std::chrono::milliseconds(20));
 
-        timeout_callback = [this](boost::system::error_code ec)
-        {
-            if (!ec)
-            {
-                logger.info("Receive {} messages per second", (number - last_number) / 5);
-                last_number = number;
-                timer_->expires_after(std::chrono::seconds(5));
-                timer_->async_wait(timeout_callback);
-            }
-        };
-        msg_callback = [this](const Message::MessagePacket &message_packet)
-        {
-            // 更新时间戳，只有时间戳大于当前时间戳才更新
-            if (message_packet.number > number)
-            {
-                number = message_packet.number;
-                update(message_packet);
-            }
-        };
-
-        tcp_client = std::make_unique<TCPSocketClient>(context, msg_callback);
+        tcp_client = std::make_unique<TCPSocketClient>(context, [this](const Message::MessagePacket &msg)
+                                                       { update(msg); });
         tcp_client->connect("192.168.4.1", "3456");
         // 注意，这个函数仅仅会发起一个异步的连接请求，而并不确保连接成功
 
         try
         {
-            serial_client = std::make_unique<SerialPortClient>(context, "/dev/ttyUSB0", msg_callback);
+            serial_client = std::make_unique<SerialPortClient>(context, "/dev/ttyUSB0", [this](const Message::MessagePacket &msg)
+                                                               { update(msg); });
         }
         catch (boost::system::system_error &e)
         {
             logger.error("Serial Port Open Failed: %s", e.what());
         }
-        timer_->async_wait(timeout_callback);
+        timer_for_count->async_wait([this](boost::system::error_code ec)
+                                    { calculate_rate(ec); });
+        timer_for_publish->async_wait([this](boost::system::error_code ec)
+                                      { publish(); });
+    }
+
+    void calculate_rate(boost::system::error_code ec)
+    {
+        if (!ec)
+        {
+            logger.info("Receive {} messages per second", (number - last_number) / 5);
+            last_number = number;
+            timer_for_count->expires_after(std::chrono::seconds(5));
+            timer_for_count->async_wait([this](boost::system::error_code ec)
+                                        { calculate_rate(ec); });
+        }
     }
 
     // 更新待发送的消息
     void update(const Message::MessagePacket &message_packet)
     {
-
-        message.action = message_packet.action;
-        message.button = message_packet.button;
+        if (message_packet.number > number)
+        {
+            number = message_packet.number;
+            message.action = message_packet.action;
+            message.button = message_packet.button;
+        }
     }
 
     // 按照设定的频率发布消息
