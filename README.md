@@ -51,14 +51,15 @@ ros2 launch joystick_upper_software joystick_launch.py
 
 ### 参数定义
 
-- ip ：手柄MCU的IP地址，字符串；
-- port ：手柄MCU的端口，数字；
-- serial_port : 手柄串口设备名，字符串；
+- ip ：手柄MCU的IP地址，字符串："192.168.4.1"；
+- port ：手柄MCU的端口，数字：3456；
+- serial_port : 手柄串口设备名，字符串："/dev/ttyUSB0"；
+- controller : 是否需要启动底盘控制器，布尔值：false；
 
 示例：你需要将串口设备名设置为`/dev/ttyACM0`
 
 ```
-ros2 launch joystick_upper_software joystick_launch.py serial_port:="/dev/ttyACM0"
+ros2 launch joystick_upper_software joystick_launch.py serial_port:="/dev/ttyACM0" 
 ```
 
 
