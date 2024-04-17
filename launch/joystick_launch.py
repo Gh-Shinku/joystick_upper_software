@@ -1,7 +1,8 @@
 from launch import LaunchDescription
-from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
 
 def generate_launch_description():
     # 声明并获取参数
@@ -16,6 +17,10 @@ def generate_launch_description():
     serial_port_arg = DeclareLaunchArgument(
         'serial_port', default_value='/dev/ttyUSB0',
         description='Serial port for the joystick publisher')
+    
+    controller_arg = DeclareLaunchArgument(
+        'controller', default_value='false',
+        description='Controller for the Chassis')
 
     # 创建节点配置
     joystick_publisher_node = Node(
@@ -30,10 +35,20 @@ def generate_launch_description():
         }]
     )
 
+    joystick_controller_node = Node(
+        package="joystick_upper_software",
+        executable="joystick_controller",
+        name="joystick_controller",
+        output="screen",
+        condition=IfCondition(LaunchConfiguration("controller")),
+    )
+
     # 创建并返回launch描述
     return LaunchDescription([
         ip_arg,
         port_arg,
         serial_port_arg,
-        joystick_publisher_node
+        controller_arg,
+        joystick_publisher_node,
+        joystick_controller_node
     ])
