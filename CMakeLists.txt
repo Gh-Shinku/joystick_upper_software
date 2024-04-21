@@ -5,6 +5,7 @@ project(joystick_upper_software VERSION 1.0 LANGUAGES CXX)
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(spdlog REQUIRED CONFIG)
+find_package(fmt REQUIRED CONFIG)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(rclcpp REQUIRED)
 find_package(bupt_interfaces REQUIRED)
@@ -20,7 +21,7 @@ add_library(
     src/tcp_socket.cpp
 )
 ament_target_dependencies(communication_lib rclcpp)
-target_link_libraries(communication_lib spdlog::spdlog Boost::system)
+target_link_libraries(communication_lib spdlog::spdlog Boost::system fmt::fmt)
 target_include_directories(communication_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_executable(
@@ -28,7 +29,7 @@ add_executable(
     src/joystick_publisher.cpp
 )
 ament_target_dependencies(joystick_publisher rclcpp bupt_interfaces)
-target_link_libraries(joystick_publisher communication_lib Boost::system spdlog::spdlog)
+target_link_libraries(joystick_publisher communication_lib Boost::system spdlog::spdlog fmt::fmt)
 target_include_directories(joystick_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
