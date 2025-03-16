@@ -12,6 +12,7 @@ find_package(bupt_interfaces REQUIRED)
 
 add_definitions(-DROS2)
 
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 
 add_library(
