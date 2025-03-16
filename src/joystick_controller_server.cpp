@@ -61,14 +61,14 @@ private:
   void joysrv_callback(bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr req);
 
 public:
-  Joystick_Vel_Server(std::string &name,
+  Joystick_Vel_Server(const std::string &name,
                       double max_linear_speed,
                       double max_angular_speed,
                       double max_linear_acc,
                       double max_angular_acc);
 };
 
-Joystick_Vel_Server::Joystick_Vel_Server(std::string &name,
+Joystick_Vel_Server::Joystick_Vel_Server(const std::string &name,
                                          double max_linear_speed,
                                          double max_angular_speed,
                                          double max_linear_acc,
