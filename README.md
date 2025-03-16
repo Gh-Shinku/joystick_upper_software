@@ -1,5 +1,5 @@
 # Joystick-Upper-Software
-
+> 本项目在队库 [Joystick-Upper-Software](https://github.com/BUPT-RobotTeam/joystick_upper_software) 做了适配于24届 RC 的修改
 手柄上位机C++版
 
 ## 构建指南
@@ -7,25 +7,6 @@
 本工程依赖boost-asio和boost-crc。暂时仅有在ROS上运行的版本。
 
 可选依赖spdlog。
-
-本工程使用vcpkg作为依赖管理工具。因此，为了正确构建本工程，你应该先安装vcpkg（或者自行引入依赖）。
-
-### 安装VCPKG
-
-参考[microsoft/vcpkg: C++ Library Manager for Windows, Linux, and MacOS (github.com)](https://github.com/microsoft/vcpkg)
-
-```sh
-$ git clone https://github.com/microsoft/vcpkg
-$ ./vcpkg/bootstrap-vcpkg.sh
-```
-
-### CMake配置
-
-本工程建议使用CMake-Presets，你可以参考CMakeUserPresets.json.template来创建一个CMakeUserPresets.json，你需要将`path to vcpkg`修改为你的vcpkg安装目录，比如`~/vcpkg`。
-
-**在多数情况下，你都只需要修改这一处。**
-
-如果你希望构建的二进制文件被输出到build目录中，你可能需要在`configurePresets`字段中加入`"binaryDir": "${sourceDir}/build"`
 
 ### ROS环境下编译
 
@@ -70,6 +51,3 @@ ros2 launch joystick_upper_software joystick_launch.py serial_port:="/dev/ttyACM
   - 目前已不存在这个问题，程序应当可以自动检测环境并使用合适的日志接口
 - 无法解析--preset参数
   - 解决方法：升级cmake到最新版本（3.20以上）
-
-
-
