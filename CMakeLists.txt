@@ -16,18 +16,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 
 add_library(
-    communication_lib STATIC
-    src/message.cpp
-    src/serial_port.cpp
-    src/tcp_socket.cpp
+  communication_lib STATIC
+  src/message.cpp
+  src/serial_port.cpp
+  src/tcp_socket.cpp
 )
 ament_target_dependencies(communication_lib rclcpp)
 target_link_libraries(communication_lib spdlog::spdlog Boost::system fmt::fmt)
 target_include_directories(communication_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_executable(
-    joystick_publisher
-    src/joystick_publisher.cpp
+  joystick_publisher
+  src/joystick_publisher.cpp
 )
 ament_target_dependencies(joystick_publisher rclcpp bupt_interfaces)
 target_link_libraries(joystick_publisher communication_lib Boost::system spdlog::spdlog fmt::fmt)
@@ -36,12 +36,22 @@ target_include_directories(joystick_publisher PUBLIC
   $<INSTALL_INTERFACE:include>)
 
 add_executable(
-    joystick_controller
-    src/joystick_controller.cpp
+  joystick_controller
+  src/joystick_controller.cpp
 )
 ament_target_dependencies(joystick_controller rclcpp bupt_interfaces geometry_msgs)
 target_link_libraries(joystick_controller communication_lib Boost::system spdlog::spdlog)
 target_include_directories(joystick_controller PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
+add_executable(
+  joystick_controller_server
+  src/joystick_controller_server.cpp
+)
+ament_target_dependencies(joystick_controller_server rclcpp bupt_interfaces geometry_msgs)
+target_link_libraries(joystick_controller_server communication_lib Boost::system spdlog::spdlog)
+target_include_directories(joystick_controller_server PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
