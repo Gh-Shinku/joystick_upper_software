@@ -55,7 +55,7 @@ target_include_directories(joystick_controller_server PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-install(TARGETS joystick_publisher joystick_controller
+install(TARGETS joystick_publisher joystick_controller joystick_controller_server
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY

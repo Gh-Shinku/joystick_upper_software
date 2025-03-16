@@ -50,7 +50,7 @@ private:
 
   static constexpr double MAX_ACTION[4] = {1616, 1665, 1681, 1617};
   static constexpr double eps = 1e-2;
-  static constexpr double cofficient_acc = 1;
+  static constexpr double cofficient_acc = 0.2;
 
   bool cond_joy_;
 
@@ -63,18 +63,15 @@ private:
 public:
   Joystick_Vel_Server(const std::string &name,
                       double max_linear_speed,
-                      double max_angular_speed,
-                      double max_linear_acc,
-                      double max_angular_acc);
+                      double max_angular_speed);
 };
 
 Joystick_Vel_Server::Joystick_Vel_Server(const std::string &name,
                                          double max_linear_speed,
-                                         double max_angular_speed,
-                                         double max_linear_acc,
-                                         double max_angular_acc)
+                                         double max_angular_speed)
     : Node(name),
       max_linear_speed(max_linear_speed),
+      max_angular_speed(max_angular_speed),
       cond_joy_(true),
       mtx_(std::mutex()),
       cv_(std::condition_variable())
@@ -101,12 +98,16 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
   double current_speed_x = 0, current_speed_y = 0, current_angular_speed = 0;
   double current_acc_x = 0, current_acc_y = 0, current_angular_acc = 0;
   // 计算加速度
-  current_acc_x = msg->action[0] / std::hypot(msg->action[0], msg->action[1]);
-  current_acc_y = msg->action[1] / std::hypot(msg->action[0], msg->action[1]);
-  current_angular_acc = get_sign(msg->action[3]) * std::hypot(msg->action[2], msg->action[3]);
+  current_acc_x = msg->action[1] / std::hypot(MAX_ACTION[0], MAX_ACTION[1]);
+  current_acc_y = msg->action[0] / std::hypot(MAX_ACTION[0], MAX_ACTION[1]);
+  current_angular_acc = get_sign(msg->action[2]) * std::hypot(msg->action[2], msg->action[3]) / std::hypot(MAX_ACTION[2], MAX_ACTION[3]);
   // 计算当前速度
   current_speed_x = current_linear_x + current_acc_x * cofficient_acc;
+  if (current_speed_x < 0)
+    current_speed_x = 0;
   current_speed_y = current_linear_y + current_acc_y * cofficient_acc;
+  if (current_speed_y < 0)
+    current_speed_y = 0;
   current_angular_speed = current_angular + current_angular_acc * cofficient_acc;
   // 速度限制
   double current_speed = std::hypot(current_speed_x, current_speed_y);
@@ -119,6 +120,9 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
     current_linear_y = 0;
   }
   current_angular = clamp(current_angular_speed, -max_angular_speed, max_angular_speed);
+  if (current_angular < 0.5) {
+    current_angular = 0;
+  }
   // 设置发送速度
   twist.linear.x = current_linear_x;
   twist.linear.y = current_linear_y;
@@ -153,7 +157,7 @@ public:
   ROS_EVENT_LOOP(int argc, char **argv)
   {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<Joystick_Vel_Server>("joystick_vel_server", 10, 5, 5, 5));
+    rclcpp::spin(std::make_shared<Joystick_Vel_Server>("joystick_vel_server", 10, 5));
   }
   ~ROS_EVENT_LOOP()
   {
