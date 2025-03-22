@@ -27,19 +27,15 @@ private:
 
 public:
   JoystickPublisher(boost::asio::io_context &context, const std::string &topic)
-      : Node("joystick_node"), context(context), logger("joystick_node")
+      : Node("joystick_node"),
+        context(context),
+        logger("joystick_node"),
+        timer_for_count(
+            std::make_unique<boost::asio::steady_timer>(context, std::chrono::seconds(5))),
+        timer_for_publish(
+            std::make_unique<boost::asio::steady_timer>(context, std::chrono::milliseconds(20)))
   {
-    publisher_ = this->create_publisher<bupt_interfaces::msg::Joystick>(topic, 100);
-    bupt_interfaces::msg::Joystick test_msg;
-    test_msg.action = {};
-    test_msg.button = 2;
-    for (int i = 0; i < 10000; i++) {
-      publisher_->publish(test_msg);
-    }
-
-    timer_for_count = std::make_unique<boost::asio::steady_timer>(context, std::chrono::seconds(5));
-    timer_for_publish =
-        std::make_unique<boost::asio::steady_timer>(context, std::chrono::milliseconds(20));
+    publisher_ = this->create_publisher<bupt_interfaces::msg::Joystick>(topic, 10);
 
     // tcp_client = std::make_unique<TCPSocketClient>(context, [this](const Message::MessagePacket
     // &msg)
@@ -117,11 +113,11 @@ class RAII
   std::unique_ptr<boost::asio::signal_set> signals_;
   LoggerImpl logger;
   std::shared_ptr<rclcpp::Node> node;
-  std::thread ros_thread;
   std::thread asio_thread;
+  std::thread ros_thread;
 
 public:
-  RAII(int argc, char *argv[]) : context(), logger("RAII")
+  RAII(int argc, char *argv[]) : logger("RAII")
   {
     rclcpp::init(argc, argv);
     try {
@@ -137,16 +133,24 @@ public:
       asio_thread = std::thread([this]() {
         context.run();
       });
+
+      ros_thread = std::thread([this]() {
+        rclcpp::spin(node);
+      });
     } catch (const std::exception &e) {
       logger.error("Exception: {}", e.what());
+      rclcpp::shutdown();
+      throw;
     }
-    rclcpp::spin(node);
   }
   ~RAII()
   {
     context.stop();
     if (asio_thread.joinable()) {
       asio_thread.join();
+    }
+    if (ros_thread.joinable()) {
+      ros_thread.join();
     }
     rclcpp::shutdown();
   }
