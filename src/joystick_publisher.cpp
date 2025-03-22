@@ -43,7 +43,7 @@ public:
 
     // this->declare_parameter("ip", "192.168.4.1");
     // this->declare_parameter("port", 3456);
-    this->declare_parameter("serial_port", "/dev/ttyUSB0");
+    this->declare_parameter("serial_port", "/dev/joystick-serial");
 
     // uint16_t port_int;
     // std::string ip, port;

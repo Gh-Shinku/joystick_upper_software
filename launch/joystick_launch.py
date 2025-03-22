@@ -15,7 +15,7 @@ def generate_launch_description():
         description='Port for the joystick publisher')
 
     serial_port_arg = DeclareLaunchArgument(
-        'serial_port', default_value='/dev/ttyUSB0',
+        'serial_port', default_value='/dev/joystick-serial',
         description='Serial port for the joystick publisher')
     
     controller_arg = DeclareLaunchArgument(
