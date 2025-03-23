@@ -35,8 +35,9 @@ private:
 
 	static constexpr double MAX_ACTION[4] = { 1616, 1665, 1681, 1617 };
 	static constexpr double eps = 1e-2;
-	/* 指数滑动平均 (alpha 控制平滑度，0.0~1.0) */
-	static constexpr double alpha = 0.2;
+	/* 指数滑动平均 (acc_coe 控制平滑度，0.0~1.0) */
+	static constexpr double acc_coe = 1;
+	static constexpr double dec_coe = 0.2;
 
 	bool cond_joy_;
 
@@ -66,6 +67,7 @@ Joystick_Vel_Server::Joystick_Vel_Server(const std::string &name, double max_lin
 }
 
 void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::SharedPtr msg) {
+	if (!cond_joy_)
 	{
 		std::unique_lock<std::mutex> lock(mtx_);
 		cv_.wait(lock, [this] {
@@ -73,14 +75,34 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
 		});
 	}
 
-	auto twist = geometry_msgs::msg::Twist();
-	double coe = std::hypot(msg->action[0], msg->action[1]) / std::hypot(MAX_ACTION[0], MAX_ACTION[1]);
-	double current_speed = max_linear_speed * coe;
-	double target_linear_x = current_speed * (msg->action[0] * 1.0 / MAX_ACTION[0]);
-	double target_linear_y = current_speed * (msg->action[1] * 1.0 / MAX_ACTION[1]);
+	for (int i = 0; i < 4; i++) {
+		if (std::abs(msg->action[i]) < 100) {
+			msg->action[i] = 0;
+		}
+	}
 
-	twist.linear.x = alpha * target_linear_x + (1 - alpha) * prev_linear_x;
-	twist.linear.y = alpha * target_linear_y + (1 - alpha) * prev_linear_y;
+	auto twist = geometry_msgs::msg::Twist();
+	// double coe = std::hypot(msg->action[0], msg->action[1]) / std::hypot(MAX_ACTION[0], MAX_ACTION[1]);
+	// double current_speed = max_linear_speed * coe;
+	// double target_linear_x = current_speed * (msg->action[0] * 1.0 / MAX_ACTION[0]);
+	// double target_linear_y = current_speed * (msg->action[1] * 1.0 / MAX_ACTION[1]);
+	double dx = msg->action[0];
+	double dy = -msg->action[1];
+	double magnitude = std::hypot(dx, dy);
+	double max_magnitude = std::hypot(MAX_ACTION[0], MAX_ACTION[1]);
+
+	double coe = (magnitude > 0) ? (magnitude / max_magnitude) : 0.0;
+	double current_speed = max_linear_speed * coe;
+
+	// 计算方向向量的单位向量
+	double unit_dx = (magnitude > 0) ? (dx / magnitude) : 0.0;
+	double unit_dy = (magnitude > 0) ? (dy / magnitude) : 0.0;
+
+	double target_linear_x = current_speed * unit_dx;
+	double target_linear_y = current_speed * unit_dy;
+
+	twist.linear.x = acc_coe * target_linear_x + (1 - acc_coe) * prev_linear_x;
+	twist.linear.y = acc_coe * target_linear_y + (1 - acc_coe) * prev_linear_y;
 
 	if (std::abs(twist.linear.x) < eps)
 		twist.linear.x = 0;
@@ -96,12 +118,13 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
 		current_speed = -current_speed;
 	}
 	double target_angular_z = current_speed;
-	twist.angular.z = alpha * target_angular_z + (1-alpha) * prev_angular_z;
+	twist.angular.z = acc_coe * target_angular_z + (1-acc_coe) * prev_angular_z;
 	if (std::abs(twist.angular.z) < eps)
 		twist.angular.z = 0;
 	prev_angular_z = twist.angular.z;
 
 	velpub_->publish(twist);
+	// std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
 void Joystick_Vel_Server::joysrv_callback(
@@ -124,7 +147,7 @@ void Joystick_Vel_Server::joysrv_callback(
 
 int main(int argc, char **argv) {
 	rclcpp::init(argc, argv);
-	rclcpp::spin(std::make_shared<Joystick_Vel_Server>("joystick_vel_server", 10, 5));
+	rclcpp::spin(std::make_shared<Joystick_Vel_Server>("joystick_vel_server", 2, 4));
 	rclcpp::shutdown();
 	return 0;
 }
