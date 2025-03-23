@@ -124,12 +124,10 @@ public:
       signals_ = std::make_unique<boost::asio::signal_set>(context, SIGINT);
       signals_->async_wait([this](const boost::system::error_code &error, int signal_number) {
         if (!error) {
-          context.stop();
           logger.warn("Receive Signal: {}", signal_number);
         }
       });
       node = std::make_shared<JoystickPublisher>(context, "/joystick");
-
       asio_thread = std::thread([this]() {
         context.run();
       });
@@ -145,10 +143,13 @@ public:
   }
   ~RAII()
   {
-    context.stop();
+    if (signals_) {
+      signals_->cancel();
+    }
     if (asio_thread.joinable()) {
       asio_thread.join();
     }
+    context.stop();
     if (ros_thread.joinable()) {
       ros_thread.join();
     }

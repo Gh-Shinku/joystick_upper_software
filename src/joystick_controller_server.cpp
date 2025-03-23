@@ -19,14 +19,6 @@ typename std::enable_if<std::is_fundamental<T>::value, T>::type clamp(const T &v
 		return val;
 }
 
-// int get_sign(double x) {
-// 	if (x > 0)
-// 		return 1;
-// 	else if (x < 0)
-// 		return -1;
-// 	else
-// 		return 0;
-// }
 
 class Joystick_Vel_Server : public rclcpp::Node {
 private:
@@ -36,16 +28,15 @@ private:
 
 	double max_linear_speed;
 	double max_angular_speed;
-	// double max_linear_acc;
-	// double max_angular_acc;
 
-	// double current_linear_x;
-	// double current_linear_y;
-	// double current_angular;
+	double prev_linear_x = 0.0;
+	double prev_linear_y = 0.0;
+	double prev_angular_z = 0.0;
 
 	static constexpr double MAX_ACTION[4] = { 1616, 1665, 1681, 1617 };
 	static constexpr double eps = 1e-2;
-	// static constexpr double cofficient_acc = 0.2;
+	/* 指数滑动平均 (alpha 控制平滑度，0.0~1.0) */
+	static constexpr double alpha = 0.2;
 
 	bool cond_joy_;
 
@@ -83,53 +74,33 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
 	}
 
 	auto twist = geometry_msgs::msg::Twist();
-	// action yxyx
 	double coe = std::hypot(msg->action[0], msg->action[1]) / std::hypot(MAX_ACTION[0], MAX_ACTION[1]);
 	double current_speed = max_linear_speed * coe;
-	twist.linear.x = current_speed * (msg->action[1] * 1.0 / MAX_ACTION[1]);
-	twist.linear.y = current_speed * (msg->action[0] * 1.0 / MAX_ACTION[0]);
+	double target_linear_x = current_speed * (msg->action[0] * 1.0 / MAX_ACTION[0]);
+	double target_linear_y = current_speed * (msg->action[1] * 1.0 / MAX_ACTION[1]);
+
+	twist.linear.x = alpha * target_linear_x + (1 - alpha) * prev_linear_x;
+	twist.linear.y = alpha * target_linear_y + (1 - alpha) * prev_linear_y;
+
+	if (std::abs(twist.linear.x) < eps)
+		twist.linear.x = 0;
+	if (std::abs(twist.linear.y) < eps)
+		twist.linear.y = 0;
+
+	prev_linear_x = twist.linear.x;
+	prev_linear_y = twist.linear.y;
 
 	coe = std::hypot(msg->action[2], msg->action[3]) / std::hypot(MAX_ACTION[2], MAX_ACTION[3]);
 	current_speed = max_angular_speed * coe;
 	if (msg->action[3] > 0) {
 		current_speed = -current_speed;
 	}
-	twist.angular.z = current_speed;
+	double target_angular_z = current_speed;
+	twist.angular.z = alpha * target_angular_z + (1-alpha) * prev_angular_z;
+	if (std::abs(twist.angular.z) < eps)
+		twist.angular.z = 0;
+	prev_angular_z = twist.angular.z;
 
-	// double current_speed_x = 0, current_speed_y = 0, current_angular_speed = 0;
-	// double current_acc_x = 0, current_acc_y = 0, current_angular_acc = 0;
-	// // 计算加速度
-	// current_acc_x = msg->action[1] / std::hypot(MAX_ACTION[0], MAX_ACTION[1]);
-	// current_acc_y = msg->action[0] / std::hypot(MAX_ACTION[0], MAX_ACTION[1]);
-	// current_angular_acc = get_sign(msg->action[2]) * std::hypot(msg->action[2], msg->action[3]) / std::hypot(MAX_ACTION[2], MAX_ACTION[3]);
-	// // 计算当前速度
-	// current_speed_x = current_linear_x + current_acc_x * cofficient_acc;
-	// if (current_speed_x < 0)
-	// 	current_speed_x = 0;
-	// current_speed_y = current_linear_y + current_acc_y * cofficient_acc;
-	// if (current_speed_y < 0)
-	// 	current_speed_y = 0;
-	// current_angular_speed = current_angular + current_angular_acc * cofficient_acc;
-	// // 速度限制
-	// double current_speed = std::hypot(current_speed_x, current_speed_y);
-	// if (current_speed > eps) {
-	// 	double current_speed_limit = clamp(current_speed, 0.0, max_linear_speed);
-	// 	current_linear_x = current_speed_x / current_speed * current_speed_limit;
-	// 	current_linear_y = current_speed_y / current_speed * current_speed_limit;
-	// } else {
-	// 	current_linear_x = 0;
-	// 	current_linear_y = 0;
-	// }
-	// current_angular = clamp(current_angular_speed, -max_angular_speed, max_angular_speed);
-	// if (current_angular < 0.5) {
-	//   current_angular = 0;
-	// }
-	// 设置发送速度
-	// twist.linear.x = current_linear_x;
-	// twist.linear.y = current_linear_y;
-	// twist.linear.z = 0;
-	// twist.angular.z = current_angular;
-	// 发送速度消息
 	velpub_->publish(twist);
 }
 
