@@ -20,7 +20,7 @@ typename std::enable_if<std::is_fundamental<T>::value, T>::type clamp(const T &v
 }
 
 class Joystick_Vel_Server : public rclcpp::Node {
- private:
+private:
   rclcpp::Subscription<bupt_interfaces::msg::Joystick>::SharedPtr joysub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velpub_;
   rclcpp::Service<bupt_interfaces::srv::JoyStickInteraction>::SharedPtr joysrv_;
@@ -32,10 +32,10 @@ class Joystick_Vel_Server : public rclcpp::Node {
   double prev_linear_y = 0.0;
   double prev_angular_z = 0.0;
 
-  static constexpr double MAX_ACTION[4] = {1616, 1665, 1681, 1617};
+  static constexpr double MAX_ACTION = 664;
   static constexpr double eps = 1e-2;
   /* 指数滑动平均 (acc_coe 控制平滑度，0.0~1.0) */
-  static constexpr double acc_coe = 1;
+  static constexpr double acc_coe = 0.2;
   static constexpr double dec_coe = 0.2;
 
   bool cond_joy_;
@@ -46,7 +46,7 @@ class Joystick_Vel_Server : public rclcpp::Node {
   void joysub_callback(bupt_interfaces::msg::Joystick::SharedPtr msg);
   void joysrv_callback(bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr req);
 
- public:
+public:
   Joystick_Vel_Server(const std::string &name, double max_linear_speed, double max_angular_speed);
 };
 
@@ -72,20 +72,20 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
 
   /* 排除死区 */
   for (int i = 0; i < 4; i++) {
-    if (std::abs(msg->action[i]) < 100) {
+    if (std::abs(msg->action[i]) < 10) {
       msg->action[i] = 0;
     }
   }
 
   auto twist = geometry_msgs::msg::Twist();
-  double dx = msg->action[0];
-  double dy = -msg->action[1]; /* 与摇杆方向一致 */
+  double dx = msg->action[1];
+  double dy = -msg->action[0];
   double magnitude = std::hypot(dx, dy);
   /* 将斜方向最大速度约束到与垂直方向一样 */
-  if (magnitude > MAX_ACTION[2]) {
-    magnitude = MAX_ACTION[2];
+  if (magnitude > MAX_ACTION) {
+    magnitude = MAX_ACTION;
   }
-  double max_magnitude = std::hypot(MAX_ACTION[0], MAX_ACTION[1]);
+  double max_magnitude = std::hypot(MAX_ACTION, MAX_ACTION);
 
   double coe = (magnitude > 0) ? (magnitude / max_magnitude) : 0.0;
   double current_speed = max_linear_speed * coe;
@@ -106,9 +106,9 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
   prev_linear_x = twist.linear.x;
   prev_linear_y = twist.linear.y;
 
-  coe = std::hypot(msg->action[2], msg->action[3]) / std::hypot(MAX_ACTION[2], MAX_ACTION[3]);
+  coe = std::hypot(msg->action[2], msg->action[3]) / max_magnitude;
   current_speed = max_angular_speed * coe;
-  if (msg->action[3] > 0) {
+  if (msg->action[3] < 0) {
     current_speed = -current_speed;
   }
   double target_angular_z = current_speed;
