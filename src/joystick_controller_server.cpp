@@ -108,7 +108,7 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
 
   coe = std::hypot(msg->action[2], msg->action[3]) / max_magnitude;
   current_speed = max_angular_speed * coe;
-  if (msg->action[3] < 0) {
+  if (msg->action[2] < 0) {
     current_speed = -current_speed;
   }
   double target_angular_z = current_speed;
