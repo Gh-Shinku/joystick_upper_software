@@ -79,7 +79,7 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
 
   auto twist = geometry_msgs::msg::Twist();
   double dx = msg->action[1];
-  double dy = -msg->action[0];
+  double dy = msg->action[0];
   double magnitude = std::hypot(dx, dy);
   /* 将斜方向最大速度约束到与垂直方向一样 */
   if (magnitude > MAX_ACTION) {
