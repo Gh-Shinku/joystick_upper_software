@@ -1,5 +1,6 @@
 #include <bupt_interfaces/msg/joystick.hpp>
 #include <bupt_interfaces/srv/joy_stick_interaction.hpp>
+#include <bupt_interfaces/srv/shoot_control.hpp>
 #include <cmath>
 #include <condition_variable>
 #include <functional>
@@ -24,6 +25,7 @@ private:
   rclcpp::Subscription<bupt_interfaces::msg::Joystick>::SharedPtr joysub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velpub_;
   rclcpp::Service<bupt_interfaces::srv::JoyStickInteraction>::SharedPtr joysrv_;
+  rclcpp::Client<bupt_interfaces::srv::ShootControl>::SharedPtr shootcli_;
 
   double max_linear_speed;
   double max_angular_speed;
@@ -45,6 +47,7 @@ private:
 
   void joysub_callback(bupt_interfaces::msg::Joystick::SharedPtr msg);
   void joysrv_callback(bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr req);
+  void send_request(const rclcpp::Client<bupt_interfaces::srv::ShootControl>::SharedPtr &client, bool is_auto, uint8_t level);
 
 public:
   Joystick_Vel_Server(const std::string &name, double max_linear_speed, double max_angular_speed);
@@ -117,6 +120,15 @@ void Joystick_Vel_Server::joysub_callback(bupt_interfaces::msg::Joystick::Shared
   prev_angular_z = twist.angular.z;
 
   velpub_->publish(twist);
+
+  /* 功能键用于投篮 or 运球 */
+  /* 临时的投篮功能键 */
+  for (int i = 0; i <= 6; ++i) {
+    if (msg->button & (1 << i)) {
+      send_request(shootcli_, false, i);
+      break;
+    }
+  }
 }
 
 void Joystick_Vel_Server::joysrv_callback(bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr req) {
@@ -133,6 +145,35 @@ void Joystick_Vel_Server::joysrv_callback(bupt_interfaces::srv::JoyStickInteract
       cond_joy_ = false;
       mtx_.unlock();
     }
+  }
+}
+
+void Joystick_Vel_Server::send_request(const rclcpp::Client<bupt_interfaces::srv::ShootControl>::SharedPtr &client, bool is_auto,
+                                       uint8_t level) {
+  // 等待服务端上线
+  int wait_time = 0;
+  while (!client->wait_for_service(std::chrono::milliseconds(100))) {
+    if (!rclcpp::ok()) {
+      RCLCPP_ERROR(this->get_logger(), "等待服务的过程中ROS2事件循环被中断");
+      return;
+    }
+    if (wait_time > 300) {
+      RCLCPP_ERROR(this->get_logger(), "等待服务超时");
+      return;
+    }
+
+    RCLCPP_INFO(this->get_logger(), "等待joystick_controller服务启动");
+    ++wait_time;
+  }
+
+  auto request = std::make_shared<bupt_interfaces::srv::ShootControl::Request>();
+  request->is_auto = true;
+  request->level = level;
+
+  RCLCPP_INFO(this->get_logger(), "发送请求给shoot_server服务");
+  auto result = client->async_send_request(request);
+  if (!(rclcpp::spin_until_future_complete(this->get_node_base_interface(), result) == rclcpp::FutureReturnCode::SUCCESS)) {
+    RCLCPP_ERROR(this->get_logger(), "请求失败");
   }
 }
 

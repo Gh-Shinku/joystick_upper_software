@@ -35,15 +35,15 @@ target_include_directories(joystick_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-add_executable(
-  joystick_controller
-  src/joystick_controller.cpp
-)
-ament_target_dependencies(joystick_controller rclcpp bupt_interfaces geometry_msgs)
-target_link_libraries(joystick_controller communication_lib Boost::system spdlog::spdlog)
-target_include_directories(joystick_controller PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+# add_executable(
+#   joystick_controller
+#   src/joystick_controller.cpp
+# )
+# ament_target_dependencies(joystick_controller rclcpp bupt_interfaces geometry_msgs)
+# target_link_libraries(joystick_controller communication_lib Boost::system spdlog::spdlog)
+# target_include_directories(joystick_controller PUBLIC
+#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#   $<INSTALL_INTERFACE:include>)
 
 add_executable(
   joystick_controller_server
@@ -55,7 +55,7 @@ target_include_directories(joystick_controller_server PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-install(TARGETS joystick_publisher joystick_controller joystick_controller_server
+install(TARGETS joystick_publisher joystick_controller_server
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY
