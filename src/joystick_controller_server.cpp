@@ -44,7 +44,8 @@ private:
   std::condition_variable cv_;
 
   void joysub_callback(bupt_interfaces::msg::Joystick::SharedPtr msg);
-  void joysrv_callback(bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr req);
+  void joysrv_callback(const bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr &req,
+                       const bupt_interfaces::srv::JoyStickInteraction::Response::SharedPtr &res);
 
 public:
   Joystick_Vel_Server(const std::string &name, double max_linear_speed, double max_angular_speed);
@@ -56,7 +57,7 @@ Joystick_Vel_Server::Joystick_Vel_Server(const std::string &name, double max_lin
           "joystick", 10, std::bind(&Joystick_Vel_Server::joysub_callback, this, std::placeholders::_1))),
       velpub_(this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10)),
       joysrv_(this->create_service<bupt_interfaces::srv::JoyStickInteraction>(
-          "joyvel_srv", std::bind(&Joystick_Vel_Server::joysrv_callback, this, std::placeholders::_1))),
+          "joyvel_srv", std::bind(&Joystick_Vel_Server::joysrv_callback, this, std::placeholders::_1, std::placeholders::_2))),
       max_linear_speed(max_linear_speed),
       max_angular_speed(max_angular_speed),
       cond_joy_(true),
@@ -119,7 +120,8 @@ void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::
   velpub_->publish(twist);
 }
 
-void Joystick_Vel_Server::joysrv_callback(bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr req) {
+void Joystick_Vel_Server::joysrv_callback(const bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr &req,
+                                          const bupt_interfaces::srv::JoyStickInteraction::Response::SharedPtr &res) {
   if (req->open == true) {
     if (!cond_joy_) {
       mtx_.lock();
@@ -134,6 +136,7 @@ void Joystick_Vel_Server::joysrv_callback(bupt_interfaces::srv::JoyStickInteract
       mtx_.unlock();
     }
   }
+  res->finish = true;
 }
 
 int main(int argc, char **argv) {
