@@ -1,11 +1,10 @@
+#include <atomic>
 #include <bupt_interfaces/msg/joystick.hpp>
 #include <bupt_interfaces/srv/joy_stick_interaction.hpp>
 #include <cmath>
-#include <condition_variable>
 #include <functional>
 #include <geometry_msgs/msg/twist.hpp>
 #include <memory>
-#include <mutex>
 #include <rclcpp/rclcpp.hpp>
 #include <string>
 
@@ -38,10 +37,7 @@ private:
   static constexpr double acc_coe = 0.2;
   static constexpr double dec_coe = 0.2;
 
-  bool cond_joy_;
-
-  std::mutex mtx_;
-  std::condition_variable cv_;
+  std::atomic<bool> cond_joy_;
 
   void joysub_callback(bupt_interfaces::msg::Joystick::SharedPtr msg);
   void joysrv_callback(const bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr &req,
@@ -60,16 +56,11 @@ Joystick_Vel_Server::Joystick_Vel_Server(const std::string &name, double max_lin
           "joyvel_srv", std::bind(&Joystick_Vel_Server::joysrv_callback, this, std::placeholders::_1, std::placeholders::_2))),
       max_linear_speed(max_linear_speed),
       max_angular_speed(max_angular_speed),
-      cond_joy_(true),
-      mtx_(std::mutex()),
-      cv_(std::condition_variable()) {
+      cond_joy_(true) {
 }
 
 void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::SharedPtr msg) {
-  if (!cond_joy_) {
-    std::unique_lock<std::mutex> lock(mtx_);
-    cv_.wait(lock, [this] { return cond_joy_; });
-  }
+  if (!cond_joy_.load()) return;
 
   /* 排除死区 */
   for (int i = 0; i < 4; i++) {
@@ -122,20 +113,7 @@ void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::
 
 void Joystick_Vel_Server::joysrv_callback(const bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr &req,
                                           const bupt_interfaces::srv::JoyStickInteraction::Response::SharedPtr &res) {
-  if (req->open == true) {
-    if (!cond_joy_) {
-      mtx_.lock();
-      cond_joy_ = true;
-      mtx_.unlock();
-      cv_.notify_one();
-    }
-  } else {
-    if (cond_joy_) {
-      mtx_.lock();
-      cond_joy_ = false;
-      mtx_.unlock();
-    }
-  }
+  cond_joy_.store(req->open);
   res->finish = true;
 }
 
