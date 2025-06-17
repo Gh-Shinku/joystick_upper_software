@@ -18,6 +18,8 @@ typename std::enable_if<std::is_fundamental<T>::value, T>::type clamp(const T &v
     return val;
 }
 
+enum class HANDLE_DEAD_ZONE : int { AIRCRAFT_HANDLE = 10, SELF_MADE_HANDLE = 100 };
+
 class Joystick_Vel_Server : public rclcpp::Node {
 private:
   rclcpp::Subscription<bupt_interfaces::msg::Joystick>::SharedPtr joysub_;
@@ -64,7 +66,7 @@ void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::
 
   /* 排除死区 */
   for (int i = 0; i < 4; i++) {
-    if (std::abs(msg->action[i]) < 10) {
+    if (std::abs(msg->action[i]) < static_cast<int>(HANDLE_DEAD_ZONE::AIRCRAFT_HANDLE)) {
       msg->action[i] = 0;
     }
   }
@@ -82,7 +84,7 @@ void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::
   double coe = (magnitude > 0) ? (magnitude / max_magnitude) : 0.0;
   double current_speed = max_linear_speed * coe;
 
-  // 计算方向向量的单位向量
+  /* 单位向量 */
   double unit_dx = (magnitude > 0) ? (dx / magnitude) : 0.0;
   double unit_dy = (magnitude > 0) ? (dy / magnitude) : 0.0;
 

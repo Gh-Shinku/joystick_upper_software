@@ -6,7 +6,6 @@
 #include "logger/logger.h"
 #include "message/message.h"
 #include "serial_port/serial_port.h"
-#include "tcp_socket/tcp_socket.h"
 
 class JoystickPublisher : public rclcpp::Node {
 private:
@@ -16,7 +15,6 @@ private:
 
   std::unique_ptr<boost::asio::steady_timer> timer_for_count;
   std::unique_ptr<boost::asio::steady_timer> timer_for_publish;
-  // std::unique_ptr<TCPSocketClient> tcp_client;
   std::unique_ptr<SerialPortClient> serial_client;
   LoggerImpl logger;
 
@@ -40,8 +38,8 @@ public:
     try {
       serial_client = std::make_unique<SerialPortClient>(context, serial_port, [this](const Message::MessagePacket &msg) {
         update(msg);
-        RCLCPP_INFO(this->get_logger(), "number: %d, action[0]:%d, action[1]:%d, action[2]:%d, action[3]:%d, button:%x\n", msg.number, msg.action[0],
-                    msg.action[1], msg.action[2], msg.action[3], msg.button);
+        RCLCPP_INFO(this->get_logger(), "number: %d, action[0]:%d, action[1]:%d, action[2]:%d, action[3]:%d, button:%x\n", msg.number,
+                    msg.action[0], msg.action[1], msg.action[2], msg.action[3], msg.button);
       });
     } catch (boost::system::system_error &e) {
       logger.error(e.what());
