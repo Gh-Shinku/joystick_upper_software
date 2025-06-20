@@ -1,5 +1,3 @@
-#include <boost/asio/signal_set.hpp>
-#include <csignal>
 #include <rclcpp/rclcpp.hpp>
 
 #include "bupt_interfaces/msg/joystick.hpp"
@@ -76,50 +74,19 @@ public:
   }
 };
 
-class RAII {
-  boost::asio::io_context context;
-  std::unique_ptr<boost::asio::signal_set> signals_;
-  LoggerImpl logger;
-  std::shared_ptr<rclcpp::Node> node;
-  std::thread asio_thread;
-  std::thread ros_thread;
-
-public:
-  RAII(int argc, char *argv[]) : logger("RAII") {
-    rclcpp::init(argc, argv);
-    try {
-      signals_ = std::make_unique<boost::asio::signal_set>(context, SIGINT);
-      signals_->async_wait([this](const boost::system::error_code &error, int signal_number) {
-        if (!error) {
-          logger.warn("Receive Signal: {}", signal_number);
-        }
-      });
-      node = std::make_shared<JoystickPublisher>(context, "/joystick");
-      asio_thread = std::thread([this]() { context.run(); });
-
-      ros_thread = std::thread([this]() { rclcpp::spin(node); });
-    } catch (const std::exception &e) {
-      logger.error("Exception: {}", e.what());
-      rclcpp::shutdown();
-      throw;
-    }
-  }
-  ~RAII() {
-    if (signals_) {
-      signals_->cancel();
-    }
-    if (asio_thread.joinable()) {
-      asio_thread.join();
-    }
-    context.stop();
-    if (ros_thread.joinable()) {
-      ros_thread.join();
-    }
-    rclcpp::shutdown();
-  }
-};
-
 int main(int argc, char **argv) {
-  auto raii = RAII(argc, argv);
+  rclcpp::init(argc, argv);
+  boost::asio::io_context io_context;
+  auto node = std::make_shared<JoystickPublisher>(io_context, "/joystick");
+
+  std::thread asio_thread{[&io_context]() { io_context.run(); }};
+
+  std::thread ros_thread{[&]() { rclcpp::spin(node); }};
+
+  ros_thread.join();
+  io_context.stop();
+  asio_thread.join();
+  rclcpp::shutdown();
+
   return 0;
 }
