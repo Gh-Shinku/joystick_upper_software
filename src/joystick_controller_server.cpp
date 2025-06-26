@@ -3,11 +3,9 @@
 #include <bupt_interfaces/srv/joy_stick_interaction.hpp>
 #include <cassert>
 #include <cmath>
-#include <condition_variable>
 #include <functional>
 #include <geometry_msgs/msg/twist.hpp>
 #include <memory>
-#include <mutex>
 #include <rclcpp/rclcpp.hpp>
 #include <string>
 
@@ -45,8 +43,6 @@ private:
   static constexpr double angular_threshold = 0.8;
 
   std::atomic<bool> joy_start_;
-  std::mutex joy_mutex_;
-  std::condition_variable joy_cond_;
 
   void joysub_callback(bupt_interfaces::msg::Joystick::SharedPtr msg);
   void joysrv_callback(const bupt_interfaces::srv::JoyStickInteraction::Request::SharedPtr &req,
@@ -70,9 +66,8 @@ Joystick_Vel_Server::Joystick_Vel_Server(const std::string &name, double max_lin
 }
 
 void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::SharedPtr msg) {
-  {
-    std::unique_lock<std::mutex> lock(joy_mutex_);
-    joy_cond_.wait(lock, [this]() { return joy_start_.load(); });
+  if (!joy_start_.load()) {
+    return;
   }
 
   /* 排除摇杆死区 */
@@ -116,6 +111,9 @@ void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::
 
   joyhanle_filter(target_angular_z, prev_angular_z, angular_coe, angular_threshold);
 
+  twist.linear.x = target_linear_x;
+  twist.linear.y = target_linear_y;
+  twist.angular.z = target_angular_z;
   velpub_->publish(twist);
 }
 
