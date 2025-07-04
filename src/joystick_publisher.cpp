@@ -30,13 +30,13 @@ public:
     publisher_ = this->create_publisher<bupt_interfaces::msg::Joystick>(topic, 10);
 
     std::string serial_port;
-    this->declare_parameter("serial_port", "/dev/usb2ttl");
+    this->declare_parameter("serial_port", "/dev/joystick_usb2ttl");
     this->get_parameter("serial_port", serial_port);
 
     try {
       serial_client = std::make_unique<SerialPortClient>(context, serial_port, [this](const Message::MessagePacket &msg) {
         update(msg);
-        RCLCPP_INFO(this->get_logger(), "number: %d, action[0]:%d, action[1]:%d, action[2]:%d, action[3]:%d, button:%x\n", msg.number,
+        RCLCPP_INFO(this->get_logger(), "number: %d, action[0]:%d, action[1]:%d, action[2]:%d, action[3]:%d, button:0x%x\n", msg.number,
                     msg.action[0], msg.action[1], msg.action[2], msg.action[3], msg.button);
       });
     } catch (boost::system::system_error &e) {

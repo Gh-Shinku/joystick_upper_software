@@ -34,11 +34,20 @@ private:
   double prev_linear_y = 0.0;
   double prev_angular_z = 0.0;
 
+  #ifdef SELF_HANDLE_ENABLE
+  static constexpr double MAX_ACTION = 1670;
+  #else
   static constexpr double MAX_ACTION = 664;
+  #endif
   static constexpr double eps = 1e-2;
   /* 指数滑动平均系数 (alpha 控制平滑度，0.0~1.0)，alpha 越大响应延迟越低 */
-  static constexpr double vel_coe = 0.2;
+  #ifdef SELF_HANDLE_ENABLE
+  static constexpr double vel_coe = 0.75;
+  static constexpr double angular_coe = 0.75;
+  #else
+  static constexpr double vel_coe = 0.3;
   static constexpr double angular_coe = 0.2;
+  #endif
   static constexpr double vel_threshold = 0.8;
   static constexpr double angular_threshold = 0.8;
 
@@ -72,15 +81,26 @@ void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::
 
   /* 排除摇杆死区 */
   for (int i = 0; i < 4; i++) {
+    #ifdef SELF_HANDLE_ENABLE
+    if (std::abs(msg->action[i]) < static_cast<int>(HANDLE_DEAD_ZONE::SELF_MADE_HANDLE)) {
+      msg->action[i] = 0;
+    }
+    #else
     if (std::abs(msg->action[i]) < static_cast<int>(HANDLE_DEAD_ZONE::AIRCRAFT_HANDLE)) {
       msg->action[i] = 0;
     }
+    #endif
   }
 
   /* 平滑平移速度 */
   auto twist = geometry_msgs::msg::Twist();
+  #ifdef SELF_HANDLE_ENABLE
+  double dx = msg->action[0];
+  double dy = -msg->action[1];
+  #else
   double dx = msg->action[1];
   double dy = msg->action[0];
+  #endif
   double magnitude = std::hypot(dx, dy);
   /* 将斜方向最大速度约束到与垂直方向一样 */
   if (magnitude > MAX_ACTION) {
@@ -104,9 +124,15 @@ void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::
   /* 平滑角速度 */
   coe = std::hypot(msg->action[2], msg->action[3]) / max_magnitude;
   current_speed = max_angular_speed * coe;
-  if (msg->action[2] < 0) {
+  #ifdef SELF_HANDLE_ENABLE
+  if (msg->action[3] < 0) {
     current_speed = -current_speed;
   }
+  #else
+  if (msg->action[2] > 0) {
+    current_speed = -current_speed;
+  }
+  #endif
   double target_angular_z = current_speed;
 
   joyhanle_filter(target_angular_z, prev_angular_z, angular_coe, angular_threshold);
@@ -125,7 +151,11 @@ void Joystick_Vel_Server::joysrv_callback(const bupt_interfaces::srv::JoyStickIn
 
 inline void Joystick_Vel_Server::joyhanle_filter(double &cur_data, double &prev_data, const double alpha, const double threshold) {
   assert(alpha >= 0 && alpha <= 1);
+  #ifdef SELF_HANDLE_ENABLE
+  cur_data = alpha * cur_data + (1 - alpha) * prev_data;
+  #else
   if (std::abs(cur_data - prev_data) < threshold) cur_data = alpha * cur_data + (1 - alpha) * prev_data;
+  #endif
   /* 过滤误差级别的波动值 */
   if (std::abs(cur_data) < eps) cur_data = 0;
   prev_data = cur_data;
@@ -133,7 +163,11 @@ inline void Joystick_Vel_Server::joyhanle_filter(double &cur_data, double &prev_
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<Joystick_Vel_Server>("joystick_vel_server", 2, 4));
+  #ifdef SELF_HANDLE_ENABLE
+  rclcpp::spin(std::make_shared<Joystick_Vel_Server>("joystick_vel_server", 3, 5));
+  #else
+  rclcpp::spin(std::make_shared<Joystick_Vel_Server>("joystick_vel_server", 4, 6));
+  #endif
   rclcpp::shutdown();
   return 0;
 }
