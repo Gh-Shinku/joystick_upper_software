@@ -1,6 +1,8 @@
+#include "joystick/joystick_handle_controller.hpp"
+
 #include <atomic>
 #include <bupt_interfaces/msg/joystick.hpp>
-#include <bupt_interfaces/srv/r2_top_control2025.hpp>
+#include <bupt_interfaces/srv/action_control.hpp>
 #include <cassert>
 #include <cmath>
 #include <functional>
@@ -10,83 +12,18 @@
 #include <rclcpp/rclcpp.hpp>
 #include <string>
 
+#include "joystick/action.hpp"
 #include "utils/utils.hpp"
 
-enum class HANDLE_DEAD_ZONE : int { AIRCRAFT_HANDLE = 10, SELF_MADE_HANDLE = 100 };
-enum class JoystickSwitch : int { BIT_JOY_HANDLE, BIT_AIM_MODE };
-
-class Joystick_Vel_Server : public rclcpp::Node {
-private:
-#ifdef SELF_HANDLE_ENABLE
-  static constexpr double MAX_ACTION = 1670;
-#else
-  static constexpr double MAX_ACTION = 664;
-#endif
-  static constexpr double eps = 1e-2;
-/* 指数滑动平均系数 (alpha 控制平滑度，0.0~1.0)，alpha 越大响应延迟越低 */
-#ifdef SELF_HANDLE_ENABLE
-  static constexpr double vel_coe = 0.75;
-  static constexpr double angular_coe = 0.75;
-#else
-  static constexpr double vel_coe = 0.3;
-  static constexpr double angular_coe = 0.2;
-#endif
-  static constexpr double vel_threshold = 0.8;
-  static constexpr double angular_threshold = 0.8;
-  static constexpr int BUTTON_AIM_MODE = 10;
-  static constexpr std::pair<double, double> rim_index{5.0, 0};
-  static constexpr double min_angular_velocity = 0.2;
-  static constexpr double eps_angle_range = 0.025;
-
-  rclcpp::Subscription<bupt_interfaces::msg::Joystick>::SharedPtr joysub_;
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velpub_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-  rclcpp::Service<bupt_interfaces::srv::R2TopControl2025>::SharedPtr joysrv_;
-
-  geometry_msgs::msg::Pose cur_pose_;
-  std::unique_ptr<PID_Controller> pid_angular_;
-
-  double max_linear_speed_;
-  double max_angular_speed_;
-
-  double prev_linear_x_;
-  double prev_linear_y_;
-  double prev_angular_z_;
-
-  std::atomic<bool> joy_switch_;
-  std::atomic<bool> aim_mode_switch_;
-
-  void joysub_callback(bupt_interfaces::msg::Joystick::SharedPtr msg);
-  void odom_sub_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
-  void joysrv_callback(const bupt_interfaces::srv::R2TopControl2025::Request::SharedPtr &req,
-                       const bupt_interfaces::srv::R2TopControl2025::Response::SharedPtr &res);
-  void joyhanle_filter(double &cur_data, double &prev_data, const double alpha, const double threshold);
-
-  /**
-   * @brief 边沿检测
-   *
-   * @param cur_button 当前按键编码
-   * @param last_button 上次按键编码
-   * @param bits 检测比特位号
-   * @param trigger_mode true 上升沿，false 下降沿
-   *
-   * @return true 说明检测到，否则无
-   */
-  static bool edge_detect(uint16_t cur_button, uint16_t last_button, uint16_t bits, bool trigger_mode);
-
-public:
-  Joystick_Vel_Server(const std::string &name, double max_linear_speed, double max_angular_speed);
-};
-
-Joystick_Vel_Server::Joystick_Vel_Server(const std::string &name, double max_linear_speed, double max_angular_speed)
+Joystick_Handle_Node::Joystick_Handle_Node(const std::string &name, double max_linear_speed, double max_angular_speed)
     : Node(name),
       joysub_(this->create_subscription<bupt_interfaces::msg::Joystick>(
-          "/joystick", 10, std::bind(&Joystick_Vel_Server::joysub_callback, this, std::placeholders::_1))),
+          "/joystick", 10, std::bind(&Joystick_Handle_Node::joysub_callback, this, std::placeholders::_1))),
       velpub_(this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10)),
       odom_sub_(this->create_subscription<nav_msgs::msg::Odometry>(
-          "/lidar_odom", 10, std::bind(&Joystick_Vel_Server::odom_sub_callback, this, std::placeholders::_1))),
-      joysrv_(this->create_service<bupt_interfaces::srv::R2TopControl2025>(
-          "joyvel_srv", std::bind(&Joystick_Vel_Server::joysrv_callback, this, std::placeholders::_1, std::placeholders::_2))),
+          "/lidar_odom", 10, std::bind(&Joystick_Handle_Node::odom_sub_callback, this, std::placeholders::_1))),
+      joysrv_(this->create_service<bupt_interfaces::srv::ActionControl>(
+          "joyvel_srv", std::bind(&Joystick_Handle_Node::joysrv_callback, this, std::placeholders::_1, std::placeholders::_2))),
       cur_pose_(),
       pid_angular_(std::make_unique<PID_Controller>(2.5, 0.0, 0.0, 2.0)),
       max_linear_speed_(max_linear_speed),
@@ -98,7 +35,7 @@ Joystick_Vel_Server::Joystick_Vel_Server(const std::string &name, double max_lin
       aim_mode_switch_(false) {
 }
 
-void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::SharedPtr msg) {
+void Joystick_Handle_Node::joysub_callback(const bupt_interfaces::msg::Joystick::SharedPtr msg) {
   if (joy_switch_.load() == false) {
     return;
   }
@@ -190,24 +127,24 @@ void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::
   velpub_->publish(twist);
 }
 
-void Joystick_Vel_Server::odom_sub_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
+void Joystick_Handle_Node::odom_sub_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
   cur_pose_ = msg->pose.pose;
 }
 
-void Joystick_Vel_Server::joysrv_callback(const bupt_interfaces::srv::R2TopControl2025::Request::SharedPtr &req,
-                                          const bupt_interfaces::srv::R2TopControl2025::Response::SharedPtr &res) {
-  if ((req->action >> static_cast<int>(JoystickSwitch::BIT_JOY_HANDLE)) & 0x01) {
+void Joystick_Handle_Node::joysrv_callback(const bupt_interfaces::srv::ActionControl::Request::SharedPtr &req,
+                                           const bupt_interfaces::srv::ActionControl::Response::SharedPtr &res) {
+  if (req->action == static_cast<uint32_t>(ACTION::ACTION_JOY_SWITCH)) {
     joy_switch_ = !joy_switch_;
-  }
-  if ((req->action >> static_cast<int>(JoystickSwitch::BIT_AIM_MODE)) & 0x01) {
+  } else if (req->action == static_cast<uint32_t>(ACTION::BUTTON_AIM_MODE)) {
     aim_mode_switch_ = !aim_mode_switch_;
   }
+
   RCLCPP_INFO(this->get_logger(), "JOY_SWITCH: %s, AIM_SWITCH: %s", (joy_switch_.load() ? "ON" : "OFF"),
               (aim_mode_switch_.load() ? "ON" : "OFF"));
   res->finish = true;
 }
 
-inline void Joystick_Vel_Server::joyhanle_filter(double &cur_data, double &prev_data, const double alpha, const double threshold) {
+void Joystick_Handle_Node::joyhanle_filter(double &cur_data, double &prev_data, const double alpha, const double threshold) {
   assert(alpha >= 0 && alpha <= 1);
 #ifdef SELF_HANDLE_ENABLE
   cur_data = alpha * cur_data + (1 - alpha) * prev_data;
@@ -222,19 +159,10 @@ inline void Joystick_Vel_Server::joyhanle_filter(double &cur_data, double &prev_
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
 #ifdef SELF_HANDLE_ENABLE
-  rclcpp::spin(std::make_shared<Joystick_Vel_Server>("joystick_vel_server", 3, 5));
+  rclcpp::spin(std::make_shared<Joystick_Handle_Node>("Joystick_Handle_Node", 3, 5));
 #else
-  rclcpp::spin(std::make_shared<Joystick_Vel_Server>("joystick_vel_server", 4, 6));
+  rclcpp::spin(std::make_shared<Joystick_Handle_Node>("Joystick_Handle_Node", 4, 6));
 #endif
   rclcpp::shutdown();
   return 0;
-}
-
-bool Joystick_Vel_Server::edge_detect(uint16_t cur_button, uint16_t last_button, uint16_t bits, bool trigger_mode) {
-  /* 0-->1 */
-  if (trigger_mode == true) {
-    return ((cur_button >> bits) & 0x01) && !((last_button >> bits) & 0x01);
-  } else /* 1-->0 */ {
-    return !((cur_button >> bits) & 0x01) && ((last_button >> bits) & 0x01);
-  }
 }
