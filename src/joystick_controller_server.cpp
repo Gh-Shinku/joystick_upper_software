@@ -106,13 +106,6 @@ void Joystick_Vel_Server::joysub_callback(const bupt_interfaces::msg::Joystick::
     return;
   }
 
-  /* 检测瞄准模式 button 是否按下 */
-  last_button_ = cur_button_;
-  cur_button_ = msg->button;
-  if (edge_detect(cur_button_, last_button_, BUTTON_AIM_MODE, true) == true) {
-    aim_mode_ = !aim_mode_;
-  }
-
   /* 排除摇杆死区 */
   for (int i = 0; i < 4; i++) {
 #ifdef SELF_HANDLE_ENABLE
@@ -192,8 +185,12 @@ void Joystick_Vel_Server::odom_sub_callback(const nav_msgs::msg::Odometry::Share
 
 void Joystick_Vel_Server::joysrv_callback(const bupt_interfaces::srv::R2TopControl2025::Request::SharedPtr &req,
                                           const bupt_interfaces::srv::R2TopControl2025::Response::SharedPtr &res) {
-  joy_start_ = (req->action >> static_cast<int>(JoystickSwitch::BIT_JOY_HANDLE)) & 0x01 ? true : false;
-  aim_mode_ = (req->action >> static_cast<int>(JoystickSwitch::BIT_AIM_MODE)) & 0x01 ? true : false;
+  if ((req->action >> static_cast<int>(JoystickSwitch::BIT_JOY_HANDLE)) & 0x01) {
+    joy_start_ = !joy_start_;
+  }
+  if ((req->action >> static_cast<int>(JoystickSwitch::BIT_AIM_MODE)) & 0x01) {
+    aim_mode_ = !aim_mode_;
+  }
   res->finish = true;
 }
 
