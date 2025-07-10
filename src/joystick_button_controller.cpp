@@ -29,6 +29,26 @@ std::string action_to_string(uint32_t action) {
       str = "YAW_ANTI_CLOCK";
       break;
     }
+    case static_cast<uint32_t>(ACTION::BUTTON_DRIBBLE): {
+      str = "BUTTON_DRIBBLE";
+      break;
+    }
+    case static_cast<uint32_t>(ACTION::BUTTON_PAWL): {
+      str = "BUTTON_PAWL";
+      break;
+    }
+    case static_cast<uint32_t>(ACTION::BUTTON_SLIDEWAY): {
+      str = "BUTTON_SLIDEWAY";
+      break;
+    }
+    case static_cast<uint32_t>(ACTION::BUTTON_GO_POINTS): {
+      str = "BUTTON_GO_POINTS";
+      break;
+    }
+    default: {
+      str = "Unknown Action";
+      break;
+    }
   }
   return str;
 }
