@@ -34,6 +34,7 @@ private:
   rclcpp::Client<bupt_interfaces::srv::ActionControl>::SharedPtr joy_client_;
 
   std::vector<EdgeDetectConfig> edge_detect_configs_; /* 存储边沿注册配置 */
+  uint16_t last_button_;
 
   /* TODO: 引入引用？移动语义？ */
   void register_edge_detect(uint32_t bit_position, bool trigger_on_rising_edge, EdgeCallback callback);
@@ -48,12 +49,13 @@ private:
    * @brief 边沿检测
    *
    * @param cur_button 当前按键编码
+   * @param last_button 上次按键编码
    * @param bits 检测比特位号
    * @param trigger_mode true 上升沿，false 下降沿
    *
    * @return true 说明检测到，否则无
    */
-  static bool edge_detect(uint16_t cur_button, uint16_t bits, bool trigger_mode);
+  static bool edge_detect(uint16_t cur_button, uint16_t last_button, uint16_t bits, bool trigger_mode);
 
 public:
   Joystick_Button_Node(std::string name);

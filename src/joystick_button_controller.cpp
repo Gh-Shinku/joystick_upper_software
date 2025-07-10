@@ -70,6 +70,7 @@ Joystick_Button_Node::Joystick_Button_Node(std::string name) : Node(name) {
   R2_client_ = this->create_client<bupt_interfaces::srv::ActionControl>(R2_service_);
   go_client_ = this->create_client<bupt_interfaces::srv::ActionControl>(go_service_);
   joy_client_ = this->create_client<bupt_interfaces::srv::ActionControl>(joy_service_);
+  last_button_ = 0;
 
   setup_edge_detect_configs();
 }
@@ -121,12 +122,14 @@ void Joystick_Button_Node::joystick_callback(const bupt_interfaces::msg::Joystic
 
   /* 通过检测上升沿来避免粘滞问题 */
   for (const auto& config : edge_detect_configs_) {
-    if (edge_detect(curr_button, config.bit_position, true)) {
+    if (edge_detect(curr_button, last_button_, config.bit_position, true)) {
       config.callback();
       /* 保留按键优先级机制，一次只相应一个功能服务请求 */
       break;
     }
   }
+
+  last_button_ = curr_button;
 }
 
 void Joystick_Button_Node::setup_edge_detect_configs() {
@@ -165,15 +168,13 @@ void Joystick_Button_Node::setup_edge_detect_configs() {
                        [this]() { send_request_action_control(go_client_, static_cast<uint32_t>(ACTION::BUTTON_GO_POINTS)); });
 }
 
-bool Joystick_Button_Node::edge_detect(uint16_t cur_button, uint16_t bits, bool trigger_mode) {
-  static uint16_t last_button = 0;
+bool Joystick_Button_Node::edge_detect(uint16_t cur_button, uint16_t last_button, uint16_t bits, bool trigger_mode) {
   /* 0-->1 */
   if (trigger_mode == true) {
     return ((cur_button >> bits) & 0x01) && !((last_button >> bits) & 0x01);
   } else /* 1-->0 */ {
     return !((cur_button >> bits) & 0x01) && ((last_button >> bits) & 0x01);
   }
-  last_button = cur_button;
 }
 
 int main(int argc, char* argv[]) {
