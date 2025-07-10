@@ -131,6 +131,18 @@ void Joystick_Button_Node::setup_edge_detect_configs() {
 
   register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_YAW_ANTI_CLOCK), true,
                        [this]() { send_request_action_control(joy_client_, static_cast<uint32_t>(ACTION::BUTTON_YAW_ANTI_CLOCK)); });
+
+  register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_DRIBBLE), true,
+                       [this]() { send_request_action_control(R2_client_, static_cast<uint32_t>(ACTION::BUTTON_DRIBBLE)); });
+
+  register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_PAWL), true,
+                       [this]() { send_request_action_control(R2_client_, static_cast<uint32_t>(ACTION::BUTTON_PAWL)); });
+
+  register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_SLIDEWAY), true,
+                       [this]() { send_request_action_control(R2_client_, static_cast<uint32_t>(ACTION::BUTTON_SLIDEWAY)); });
+
+  register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_GO_POINTS), true,
+                       [this]() { send_request_action_control(go_client_, static_cast<uint32_t>(ACTION::BUTTON_GO_POINTS)); });
 }
 
 bool Joystick_Button_Node::edge_detect(uint16_t cur_button, uint16_t bits, bool trigger_mode) {

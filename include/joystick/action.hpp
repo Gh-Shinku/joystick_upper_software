@@ -20,7 +20,7 @@ enum class ACTION {
 #else
 /* R2 */
 enum class ACTION {
-  BUTTON_SHOOT,          /* 发射 */
+  BUTTON_SHOOT = 20,     /* 发射 */
   BUTTON_AIM_MODE,       /* 瞄准模式  */
   BUTTON_ACC_RPM,        /* 转速微增 */
   BUTTON_DEC_RPM,        /* 转速微减 */
