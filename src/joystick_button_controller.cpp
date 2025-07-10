@@ -40,19 +40,20 @@ Joystick_Button_Node::Joystick_Button_Node(std::string name) : Node(name) {
   this->declare_parameter("go_service", "go_srv");
   this->declare_parameter("joy_service", "joyvel_srv");
   this->get_parameter("joystick_topic", joystick_topic_);
-  this->get_parameter("R1_service", R1_service_);
+  this->get_parameter("R1_service", R1_service_name_);
   this->get_parameter("R2_service", R2_service_);
   this->get_parameter("go_service", go_service_);
   this->get_parameter("joy_service", joy_service_);
   joystick_sub_ = this->create_subscription<bupt_interfaces::msg::Joystick>(
       joystick_topic_, 10, std::bind(&Joystick_Button_Node::joystick_callback, this, std::placeholders::_1));
-  R1_client_ = this->create_client<bupt_interfaces::srv::ActionControl>(R1_service_);
+  R1_client_ = this->create_client<bupt_interfaces::srv::ActionControl>(R1_service_name_);
   R2_client_ = this->create_client<bupt_interfaces::srv::ActionControl>(R2_service_);
   go_client_ = this->create_client<bupt_interfaces::srv::ActionControl>(go_service_);
   joy_client_ = this->create_client<bupt_interfaces::srv::ActionControl>(joy_service_);
 
   setup_edge_detect_configs();
 }
+
 Joystick_Button_Node::~Joystick_Button_Node() {
   RCLCPP_INFO(this->get_logger(), "上位机节点退出");
 }
@@ -109,18 +110,22 @@ void Joystick_Button_Node::joystick_callback(const bupt_interfaces::msg::Joystic
 }
 
 void Joystick_Button_Node::setup_edge_detect_configs() {
+  /* SHOOT service 对接结束，server 端不对 request 做检查，直接开始发射 */
   register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_SHOOT), true,
                        [this]() { send_request_action_control(R1_client_, static_cast<uint32_t>(ACTION::BUTTON_SHOOT)); });
 
+  /* AIM_MODE service 对接结束，server 端检测 action 是否为对应的，是则将手柄开关取反 */
   register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_AIM_MODE), true,
                        [this]() { send_request_action_control(joy_client_, static_cast<uint32_t>(ACTION::BUTTON_AIM_MODE)); });
 
+  /* ACC_RPM service 转速微调对接结束 */
   register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_ACC_RPM), true,
-                       [this]() { send_request_action_control(R1_client_, static_cast<uint32_t>(ACTION::BUTTON_AIM_MODE)); });
+                       [this]() { send_request_action_control(R1_client_, static_cast<uint32_t>(ACTION::BUTTON_ACC_RPM)); });
 
   register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_DEC_RPM), true,
                        [this]() { send_request_action_control(R1_client_, static_cast<uint32_t>(ACTION::BUTTON_DEC_RPM)); });
 
+  /* YAW_CLOCK service 暂未对接 */
   register_edge_detect(static_cast<uint32_t>(ACTION::BUTTON_YAW_CLOCK), true,
                        [this]() { send_request_action_control(joy_client_, static_cast<uint32_t>(ACTION::BUTTON_YAW_CLOCK)); });
 

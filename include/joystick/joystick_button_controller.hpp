@@ -23,7 +23,7 @@ private:
 
   std::string joystick_topic_;
   std::string R2_service_;
-  std::string R1_service_;
+  std::string R1_service_name_;
   std::string go_service_;
   std::string joy_service_;
 

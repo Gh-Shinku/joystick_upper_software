@@ -137,6 +137,12 @@ void Joystick_Handle_Node::joysrv_callback(const bupt_interfaces::srv::ActionCon
     joy_switch_ = !joy_switch_;
   } else if (req->action == static_cast<uint32_t>(ACTION::BUTTON_AIM_MODE)) {
     aim_mode_switch_ = !aim_mode_switch_;
+  } else if (req->action == static_cast<uint32_t>(ACTION::BUTTON_YAW_CLOCK)) {
+    if (joy_switch_.load() == true) joy_switch_ = false;
+    fine_tune_angle(true);
+  } else if (req->action == static_cast<uint32_t>(ACTION::BUTTON_YAW_ANTI_CLOCK)) {
+    if (joy_switch_.load() == true) joy_switch_ = false;
+    fine_tune_angle(false);
   }
 
   RCLCPP_INFO(this->get_logger(), "JOY_SWITCH: %s, AIM_SWITCH: %s", (joy_switch_.load() ? "ON" : "OFF"),
@@ -154,6 +160,26 @@ void Joystick_Handle_Node::joyhanle_filter(double &cur_data, double &prev_data, 
   /* 过滤误差级别的波动值 */
   if (std::abs(cur_data) < eps) cur_data = 0;
   prev_data = cur_data;
+}
+
+void Joystick_Handle_Node::fine_tune_angle(bool is_clockwise) {
+  double angular = fine_tune_angular * (is_clockwise ? -1 : 1);
+
+  auto publisher_timer = std::shared_ptr<rclcpp::TimerBase>();
+  auto stop_timer = std::shared_ptr<rclcpp::TimerBase>();
+
+  publisher_timer = this->create_wall_timer(std::chrono::milliseconds(20), [this, angular]() {
+    auto twist = geometry_msgs::msg::Twist();
+    twist.angular.z = angular;
+    velpub_->publish(twist);
+  });
+
+  stop_timer = this->create_wall_timer(std::chrono::milliseconds(fine_tune_ms), [this, &publisher_timer, &stop_timer]() {
+    auto stop_twist = geometry_msgs::msg::Twist();
+    velpub_->publish(stop_twist);
+    publisher_timer->cancel();
+    stop_timer->cancel();
+  });
 }
 
 int main(int argc, char **argv) {

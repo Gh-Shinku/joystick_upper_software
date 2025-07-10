@@ -40,6 +40,8 @@ private:
   static constexpr std::pair<double, double> rim_index{5.0, 0};
   static constexpr double min_angular_velocity = 0.2;
   static constexpr double eps_angle_range = 0.025;
+  static constexpr double fine_tune_angular = 0.5;
+  static constexpr int fine_tune_ms = 500;
 
   rclcpp::Subscription<bupt_interfaces::msg::Joystick>::SharedPtr joysub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velpub_;
@@ -64,6 +66,7 @@ private:
   void joysrv_callback(const bupt_interfaces::srv::ActionControl::Request::SharedPtr &req,
                        const bupt_interfaces::srv::ActionControl::Response::SharedPtr &res);
   void joyhanle_filter(double &cur_data, double &prev_data, const double alpha, const double threshold);
+  void fine_tune_angle(bool is_clockwise);
 
 public:
   Joystick_Handle_Node(const std::string &name, double max_linear_speed, double max_angular_speed);

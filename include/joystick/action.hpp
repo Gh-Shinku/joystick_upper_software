@@ -10,8 +10,8 @@ enum class ACTION {
   BUTTON_AIM_MODE = 5,        /* 瞄准模式  */
   BUTTON_ACC_RPM = 8,         /* 转速微增 */
   BUTTON_DEC_RPM = 9,         /* 转速微减 */
-  BUTTON_YAW_CLOCK = 10,      /* 顺时针微调 */
-  BUTTON_YAW_ANTI_CLOCK = 11, /* 逆时针微调 */
+  BUTTON_YAW_CLOCK = 11,      /* 顺时针微调 */
+  BUTTON_YAW_ANTI_CLOCK = 10, /* 逆时针微调 */
   BUTTON_DRIBBLE, /* 对于 R1 车来说，DRIBBLE 往后的动作实际上是无效的，全部写上仅为保证编译通过 */
   BUTTON_PAWL,
   BUTTON_SLIDEWAY,
