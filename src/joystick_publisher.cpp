@@ -57,11 +57,9 @@ public:
 
   // 更新待发送的消息
   void update(const Message::MessagePacket &message_packet) {
-    if (message_packet.number > number) {
-      number = message_packet.number;
-      message.action = message_packet.action;
-      message.button = message_packet.button;
-    }
+    number = message_packet.number;
+    message.action = message_packet.action;
+    message.button = message_packet.button;
   }
 
   // 按照设定的频率发布消息

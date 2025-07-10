@@ -32,7 +32,8 @@ Joystick_Handle_Node::Joystick_Handle_Node(const std::string &name, double max_l
       prev_linear_y_(0.0),
       prev_angular_z_(0.0),
       joy_switch_(true),
-      aim_mode_switch_(false) {
+      aim_mode_switch_(false),
+      angle_offset_(0) {
 }
 
 void Joystick_Handle_Node::joysub_callback(const bupt_interfaces::msg::Joystick::SharedPtr msg) {
@@ -87,7 +88,7 @@ void Joystick_Handle_Node::joysub_callback(const bupt_interfaces::msg::Joystick:
   if (aim_mode_switch_.load() == true) {
     const auto dx = rim_index.first - cur_pose_.position.x;
     const auto dy = rim_index.second - cur_pose_.position.y;
-    const auto target_yaw = std::atan2(dy, dx);
+    const auto target_yaw = std::atan2(dy, dx) + degToRad(static_cast<double>(angle_offset_.load()));
     const auto yaw = cur_pose_.position.z;
     const auto err_angle = -normalizeRad(target_yaw - yaw);
     const auto pid_output = pid_angular_->update(err_angle);
@@ -138,10 +139,8 @@ void Joystick_Handle_Node::joysrv_callback(const bupt_interfaces::srv::ActionCon
   } else if (req->action == static_cast<uint32_t>(ACTION::BUTTON_AIM_MODE)) {
     aim_mode_switch_ = !aim_mode_switch_;
   } else if (req->action == static_cast<uint32_t>(ACTION::BUTTON_YAW_CLOCK)) {
-    if (joy_switch_.load() == true) joy_switch_ = false;
     fine_tune_angle(true);
   } else if (req->action == static_cast<uint32_t>(ACTION::BUTTON_YAW_ANTI_CLOCK)) {
-    if (joy_switch_.load() == true) joy_switch_ = false;
     fine_tune_angle(false);
   }
 
@@ -163,23 +162,7 @@ void Joystick_Handle_Node::joyhanle_filter(double &cur_data, double &prev_data, 
 }
 
 void Joystick_Handle_Node::fine_tune_angle(bool is_clockwise) {
-  double angular = fine_tune_angular * (is_clockwise ? -1 : 1);
-
-  auto publisher_timer = std::shared_ptr<rclcpp::TimerBase>();
-  auto stop_timer = std::shared_ptr<rclcpp::TimerBase>();
-
-  publisher_timer = this->create_wall_timer(std::chrono::milliseconds(20), [this, angular]() {
-    auto twist = geometry_msgs::msg::Twist();
-    twist.angular.z = angular;
-    velpub_->publish(twist);
-  });
-
-  stop_timer = this->create_wall_timer(std::chrono::milliseconds(fine_tune_ms), [this, &publisher_timer, &stop_timer]() {
-    auto stop_twist = geometry_msgs::msg::Twist();
-    velpub_->publish(stop_twist);
-    publisher_timer->cancel();
-    stop_timer->cancel();
-  });
+  angle_offset_ += YAW_UNIT * (is_clockwise ? -1 : 1);
 }
 
 int main(int argc, char **argv) {

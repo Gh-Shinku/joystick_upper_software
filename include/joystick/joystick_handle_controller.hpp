@@ -40,8 +40,9 @@ private:
   static constexpr std::pair<double, double> rim_index{5.0, 0};
   static constexpr double min_angular_velocity = 0.2;
   static constexpr double eps_angle_range = 0.025;
-  static constexpr double fine_tune_angular = 0.5;
+  static constexpr double fine_tune_angular = 0.75;
   static constexpr int fine_tune_ms = 500;
+  static constexpr int YAW_UNIT = 1;
 
   rclcpp::Subscription<bupt_interfaces::msg::Joystick>::SharedPtr joysub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velpub_;
@@ -60,6 +61,9 @@ private:
 
   std::atomic<bool> joy_switch_;
   std::atomic<bool> aim_mode_switch_;
+
+  /* yaw 角偏移量（deg） */
+  std::atomic<int> angle_offset_;
 
   void joysub_callback(const bupt_interfaces::msg::Joystick::SharedPtr msg);
   void odom_sub_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
